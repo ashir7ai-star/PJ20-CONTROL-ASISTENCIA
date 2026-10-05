@@ -59,6 +59,7 @@ const textPairs: [string, string][] = [
   ['danger', 'danger-soft'],
   ['info', 'canvas'],
   ['info', 'info-soft'],
+  ['canvas', 'danger'],
 ];
 
 describe.each([

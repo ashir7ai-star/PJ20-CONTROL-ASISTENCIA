@@ -102,6 +102,7 @@ Un **catálogo** interno (`/diseno`, solo en desarrollo) muestra todos los token
 | ---------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 2026-10-05 | Plan  | Aprobado. Empresa: **BLAZAR ENERGY**; encabezado = logo + «Control de Asistencia»; app **100 % en español** (agregado a `CLAUDE.md` B.14 y sección C). |
 | 2026-10-05 | A     | Elegida la dirección **«Pulso»** (`docs/design/fase-1-A-direcciones.png`).                                                                             |
+| 2026-10-05 | B     | **Aprobado**: sistema de diseño + pantallas del empleado (`docs/design/fase-1-B-*.png`). Logo SVG: no disponible por ahora; se usa el PNG procesado.   |
 
 ### Cambios técnicos respecto al plan
 
@@ -111,3 +112,12 @@ Un **catálogo** interno (`/diseno`, solo en desarrollo) muestra todos los token
 - **Fuente:** Inter solo con el subconjunto latino (1 archivo de 48 KB en lugar de 7).
 - Páginas de desarrollo (`/diseno`, `/estado`) con carga diferida: no pesan en la app del empleado.
 - Guardianes automáticos nuevos: contraste WCAG de todos los tokens (claro y oscuro) y prohibición de colores sueltos en componentes, ambos con control negativo.
+
+### Punto C — Panel del administrador (en revisión)
+
+- Pantallas: Resumen en vivo, Marcaciones (filtros + estado vacío), Detalle (selfie, mapa, dispositivo, verificaciones del servidor), Por revisar (con explicación en español de cada señal), Empleados (alta con formulario), Celulares (aprobación de cambio de equipo). Capturas en `docs/design/fase-1-C/`.
+- **Coherencia con las reglas:** una ubicación falsa en Android se **bloquea** (intento bloqueado, sin registro); solo las marcaciones aceptadas con señales dudosas van a «Por revisar» (`CLAUDE.md` §2B).
+- El panel se descarga como paquete separado (20 KB gzip). **Guardián en el build** (`app/scripts/check-bundle.mjs`, con control negativo): falla si código del panel aparece en el paquete del empleado.
+- Pantalla de carga con la marca para secciones diferidas (antes: pantalla en blanco al abrir el panel directamente).
+- Accesibilidad: axe encontró dos menús con el mismo nombre (lateral e inferior) → corregido. Foco inicial de los paneles: el panel mismo (no el botón cerrar); en formularios, el primer campo.
+- Revisión visual con emulación real de dispositivo vía protocolo DevTools (390 px y 1440 px, claro/oscuro), registrando la consola: 0 errores, 0 advertencias. El método anterior con iframes no era confiable para páginas diferidas.

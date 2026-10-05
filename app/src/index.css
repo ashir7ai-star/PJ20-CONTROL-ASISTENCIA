@@ -113,6 +113,27 @@
   background-attachment: fixed;
 }
 
+/* Overlay entrance animations (disabled by prefers-reduced-motion below). */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-left {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+
 /* Camera viewfinder glow behind the face guide. */
 @utility bg-viewfinder-glow {
   background-image: radial-gradient(circle at 50% 40%, #1d3a63 0%, #0a1f3c 55%, #050b16 100%);

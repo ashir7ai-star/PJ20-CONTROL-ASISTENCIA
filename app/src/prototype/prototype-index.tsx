@@ -27,6 +27,15 @@ const errorScreens: Entry[] = Object.entries(problems).map(([kind, content]) => 
   to: `/prototipo/empleado/problema/${kind}`,
 }));
 
+const adminScreens: Entry[] = [
+  { label: 'Resumen en vivo', to: '/prototipo/admin' },
+  { label: 'Marcaciones', to: '/prototipo/admin/marcaciones' },
+  { label: 'Detalle de una marcación', to: '/prototipo/admin/marcaciones?detalle=m031' },
+  { label: 'Por revisar', to: '/prototipo/admin/revision' },
+  { label: 'Empleados', to: '/prototipo/admin/empleados' },
+  { label: 'Celulares', to: '/prototipo/admin/celulares' },
+];
+
 const tools: Entry[] = [
   { label: 'Sistema de diseño', to: '/diseno' },
   { label: 'Estado del sistema', to: '/estado' },
@@ -44,6 +53,7 @@ export function PrototypeIndex() {
         </p>
         <Section title="Empleado" entries={employeeFlow} />
         <Section title="Mensajes de error" entries={errorScreens} />
+        <Section title="Administrador" entries={adminScreens} />
         <Section title="Herramientas" entries={tools} />
       </main>
     </div>
