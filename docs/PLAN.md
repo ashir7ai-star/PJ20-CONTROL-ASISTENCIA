@@ -122,14 +122,14 @@ Cada fase termina con: verificación completa (lint, typecheck, pruebas, build, 
 
 ## Registro de estado
 
-| Fase                     | Estado    |
-| ------------------------ | --------- |
-| 0 — Fundaciones          | Pendiente |
-| 1 — Diseño               | Pendiente |
-| 2 — Backend núcleo       | Pendiente |
-| 3 — App empleado         | Pendiente |
-| 4 — Antifraude servidor  | Pendiente |
-| 5 — APK Android          | Pendiente |
-| 6 — Panel administrativo | Pendiente |
-| 7 — Despliegue y piloto  | Pendiente |
-| 8 — Producción           | Pendiente |
+| Fase                     | Estado                               |
+| ------------------------ | ------------------------------------ |
+| 0 — Fundaciones          | ✅ Implementada (falta CI en GitHub) |
+| 1 — Diseño               | Pendiente                            |
+| 2 — Backend núcleo       | Pendiente                            |
+| 3 — App empleado         | Pendiente                            |
+| 4 — Antifraude servidor  | Pendiente                            |
+| 5 — APK Android          | Pendiente                            |
+| 6 — Panel administrativo | Pendiente                            |
+| 7 — Despliegue y piloto  | Pendiente                            |
+| 8 — Producción           | Pendiente                            |
