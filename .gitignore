@@ -1,0 +1,54 @@
+# ─── Secrets (NEVER commit) ───────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+credentials*.json
+service-account*.json
+
+# ─── Database dumps / backups ─────────────────────────────
+*.sql.gz
+*.dump
+*.backup
+backups/
+
+# ─── Dependencies ─────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ─── Build output ─────────────────────────────────────────
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# ─── Android (Capacitor) ──────────────────────────────────
+app/android/app/build/
+app/android/.gradle/
+app/android/local.properties
+*.apk
+*.aab
+
+# ─── Logs ─────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── OS / editors ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ─── Claude Code local settings ───────────────────────────
+.claude/settings.local.json
