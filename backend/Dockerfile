@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Build context: repository root  →  docker build -f backend/Dockerfile .
 
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /repo
 RUN corepack enable
 
@@ -17,7 +17,7 @@ COPY backend backend
 RUN pnpm --filter @pj20/backend build \
   && pnpm --filter @pj20/backend deploy --prod --legacy /out
 
-FROM node:24-alpine AS runtime
+FROM node:26-alpine AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=4400
