@@ -1,0 +1,11 @@
+packages:
+  - backend
+  - app
+  - packages/*
+
+# Supply-chain protection: only install versions public for at least 7 days.
+minimumReleaseAge: 10080
+
+# Only these dependencies may run install scripts.
+allowBuilds:
+  esbuild: true
