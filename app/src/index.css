@@ -1,35 +1,127 @@
 @import 'tailwindcss';
 
+/* Inter, self-hosted, Latin subset only (covers all Spanish characters: á é í ó ú ñ ü ¿ ¡ €). */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /*
- * Base tokens. The full design system (Fase 1) will extend these;
- * components must use tokens, never raw values (CLAUDE.md, Regla suprema B.2).
+ * BLAZAR ENERGY · Design tokens (single source of truth).
+ * Components use ONLY these semantic tokens — never raw colour values
+ * (CLAUDE.md, Regla suprema B.2). Contrast pairs are verified by
+ * src/design/tokens.test.ts against WCAG 2.1 AA in light and dark.
  */
 @theme {
   --font-sans:
-    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  --color-canvas: #f5f5f7;
-  --color-surface: #ffffff;
-  --color-ink: #1d1d1f;
-  --color-ink-muted: #6e6e73;
-  --color-line: #e5e5ea;
-  --color-success: #1f8a4c;
-  --color-warning: #b25e09;
-  --color-danger: #c4271d;
+  /* Brand (from the official logo) */
+  --color-brand-navy: #0a1f3c;
+  --color-brand-green: #10b981;
+  --color-brand-blue: #0ea5e9;
+
+  /* Surfaces */
+  --color-canvas: #ffffff;
+  --color-surface: #f5f7fa;
+  --color-surface-raised: #ffffff;
+  --color-line: #e3e8ef;
+  --color-line-strong: #c9d2de;
+
+  /* Text */
+  --color-ink: #0a1f3c;
+  --color-ink-muted: #526175;
+  --color-link: #0369a1;
+
+  /* Primary actions */
+  --color-primary: #0a1f3c;
+  --color-primary-ink: #ffffff;
+  --color-check-in: #10b981;
+  --color-check-in-ink: #0a1f3c;
+  --color-check-out: #0a1f3c;
+  --color-check-out-ink: #ffffff;
+  --color-ring: #0ea5e9;
+  --color-focus: #0369a1;
+
+  /* Feedback */
+  --color-success: #047857;
+  --color-success-soft: #ecfdf5;
+  --color-warning: #b45309;
+  --color-warning-soft: #fffbeb;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fef2f2;
+  --color-info: #0369a1;
+  --color-info-soft: #f0f9ff;
+
+  /* Camera viewfinder (always dark, both themes) */
+  --color-viewfinder: #050b16;
+  --color-viewfinder-ink: #ffffff;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1.2);
+
+  /* Pulso background (dark mode adds a navy glow) */
+  --pulse-glow: none;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-canvas: #0b0b0f;
-    --color-surface: #16161a;
-    --color-ink: #f5f5f7;
-    --color-ink-muted: #a1a1a6;
-    --color-line: #2c2c31;
-    --color-success: #34c46e;
-    --color-warning: #ff9f2e;
-    --color-danger: #ff5a4f;
+    --color-canvas: #050b16;
+    --color-surface: #0d1b33;
+    --color-surface-raised: #12233f;
+    --color-line: #1f3456;
+    --color-line-strong: #2c4670;
+
+    --color-ink: #f5f8fc;
+    --color-ink-muted: #a9b8cc;
+    --color-link: #7dd3fc;
+
+    --color-primary: #ffffff;
+    --color-primary-ink: #0a1f3c;
+    --color-check-in: #34d399;
+    --color-check-in-ink: #0a1f3c;
+    --color-check-out: #ffffff;
+    --color-check-out-ink: #0a1f3c;
+    --color-ring: #0ea5e9;
+    --color-focus: #7dd3fc;
+
+    --color-success: #34d399;
+    --color-success-soft: #0b2e27;
+    --color-warning: #fbbf24;
+    --color-warning-soft: #33260a;
+    --color-danger: #f87171;
+    --color-danger-soft: #3a1414;
+    --color-info: #38bdf8;
+    --color-info-soft: #0b2a42;
+
+    --pulse-glow: radial-gradient(120% 80% at 50% 0%, #12305a 0%, #0a1f3c 40%, #050b16 100%);
   }
+}
+
+/* The "Pulso" screen background: plain canvas in light, navy glow in dark. */
+@utility bg-pulse {
+  background-color: var(--color-canvas);
+  background-image: var(--pulse-glow);
+  background-attachment: fixed;
+}
+
+/* Camera viewfinder glow behind the face guide. */
+@utility bg-viewfinder-glow {
+  background-image: radial-gradient(circle at 50% 40%, #1d3a63 0%, #0a1f3c 55%, #050b16 100%);
+}
+
+/* Respect iPhone notch / Android gesture areas. */
+@utility safe-area {
+  padding-top: max(env(safe-area-inset-top), 0px);
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
 }
 
 @layer base {
@@ -37,10 +129,18 @@
     color-scheme: light dark;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
   }
 
   body {
     @apply bg-canvas font-sans text-ink;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 3px;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -48,6 +148,7 @@
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
   }
