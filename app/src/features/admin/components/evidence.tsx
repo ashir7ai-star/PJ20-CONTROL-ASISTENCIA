@@ -1,25 +1,34 @@
-import { Camera, MapPin } from 'lucide-react';
+import { Building2, Camera, MapPin, Trees } from 'lucide-react';
 
 import { Avatar } from '../../../components/ui/avatar.js';
 import { cn } from '../../../lib/cn.js';
 import { formatAccuracy } from '../../../lib/format.js';
 
 /**
- * Selfie preview. Fase 1 shows a placeholder; from Fase 6 it loads the real
- * photo through a short-lived signed URL (CLAUDE.md §2B.6).
+ * Selfie preview: face + the place behind the employee (CLAUDE.md §2B.6).
+ * Fase 1 shows a placeholder; from Fase 6 it loads the real photo through a
+ * short-lived signed URL.
  */
 export function SelfiePreview({ initials, className }: { initials: string; className?: string }) {
   return (
     <figure
       className={cn(
-        'relative grid aspect-[3/4] place-items-center overflow-hidden rounded-2xl bg-viewfinder-glow',
+        'relative aspect-[3/4] overflow-hidden rounded-2xl bg-viewfinder-glow',
         className,
       )}
     >
-      <Avatar initials={initials} size="lg" />
+      <div
+        className="absolute inset-x-0 bottom-0 flex items-end justify-around px-2 pb-8 text-viewfinder-ink/20"
+        aria-hidden="true"
+      >
+        <Trees className="size-8" strokeWidth={1.25} />
+        <Building2 className="size-14" strokeWidth={1.25} />
+        <Building2 className="size-9" strokeWidth={1.25} />
+      </div>
+      <Avatar initials={initials} className="absolute left-1/2 top-[18%] -translate-x-1/2" />
       <figcaption className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-viewfinder/70 px-2 py-0.5 text-[11px] font-medium text-viewfinder-ink">
         <Camera className="size-3" aria-hidden="true" />
-        Selfie
+        Selfie con el lugar
       </figcaption>
     </figure>
   );

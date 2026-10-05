@@ -121,3 +121,10 @@ Un **catálogo** interno (`/diseno`, solo en desarrollo) muestra todos los token
 - Pantalla de carga con la marca para secciones diferidas (antes: pantalla en blanco al abrir el panel directamente).
 - Accesibilidad: axe encontró dos menús con el mismo nombre (lateral e inferior) → corregido. Foco inicial de los paneles: el panel mismo (no el botón cerrar); en formularios, el primer campo.
 - Revisión visual con emulación real de dispositivo vía protocolo DevTools (390 px y 1440 px, claro/oscuro), registrando la consola: 0 errores, 0 advertencias. El método anterior con iframes no era confiable para páginas diferidas.
+
+### Ajuste solicitado (2026-10-05): selfie con rostro **y** lugar
+
+- Requisito del dueño del proyecto: la foto debe mostrar el rostro y el lugar de fondo para verificar que el empleado está en su sitio de trabajo.
+- Pantalla de selfie rediseñada: guía de rostro pequeña en la parte superior, marco completo con esquinas e indicación «El lugar donde estás»; instrucción «Estira el brazo y deja ver lo que hay detrás de ti».
+- Consentimiento (Ley 1581) y permisos actualizados para informar que la foto incluye el lugar. Regla agregada en `CLAUDE.md` §2B.6.
+- Vista previa del panel: «Selfie con el lugar».

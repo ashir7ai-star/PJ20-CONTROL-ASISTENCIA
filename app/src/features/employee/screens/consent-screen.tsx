@@ -33,7 +33,8 @@ export function ConsentScreen({ onAccept }: ConsentScreenProps) {
             Solo en el instante en que marcas. Nunca te rastreamos durante el día.
           </DataItem>
           <DataItem icon={<Camera className="size-5" />} title="Fotografía (selfie)">
-            Confirma que eres tú quien marca. Es un dato sensible: solo la ven los administradores.
+            Muestra tu rostro y el lugar donde estás al marcar, para confirmar que eres tú y que
+            estás en tu sitio de trabajo. Es un dato sensible: solo la ven los administradores.
           </DataItem>
           <DataItem icon={<Smartphone className="size-5" />} title="Tu celular">
             Identificamos el dispositivo para evitar que otra persona marque por ti.

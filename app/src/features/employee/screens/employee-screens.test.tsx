@@ -120,3 +120,17 @@ describe('Confirmación', () => {
     expect(screen.getByText('Registrada por el servidor')).toBeInTheDocument();
   });
 });
+
+describe('Selfie', () => {
+  it('pide que se vean el rostro y el lugar de trabajo', () => {
+    render(<SelfieScreen kind="check_in" />);
+    expect(screen.getByText('Que se vean tu rostro y el lugar')).toBeInTheDocument();
+    expect(screen.getByText(/deja ver lo que hay detrás de ti/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tomar selfie' })).toBeInTheDocument();
+  });
+
+  it('el consentimiento informa que la foto incluye el lugar', () => {
+    render(<ConsentScreen />);
+    expect(screen.getByText(/Muestra tu rostro y el lugar donde estás/)).toBeInTheDocument();
+  });
+});

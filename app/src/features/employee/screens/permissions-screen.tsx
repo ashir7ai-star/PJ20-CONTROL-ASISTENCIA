@@ -23,7 +23,7 @@ export function PermissionsScreen({ onRequest }: PermissionsScreenProps) {
           Registra desde dónde marcas. Solo se usa en ese momento.
         </PermissionCard>
         <PermissionCard icon={<Camera className="size-6" />} title="Cámara">
-          Toma una selfie al marcar para confirmar que eres tú.
+          Toma una selfie al marcar donde se vean tu rostro y el lugar donde estás.
         </PermissionCard>
       </div>
 
