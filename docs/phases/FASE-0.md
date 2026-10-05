@@ -9,27 +9,27 @@ Dejar lista la base técnica sobre la que se construirá todo el proyecto: estru
 
 ## 2. Diagnóstico del equipo (verificado el 2026-10-05)
 
-| Elemento | Estado | Acción |
-|---|---|---|
-| Node.js 24.15 / npm 11.12 | OK | — |
-| Git 2.53 | OK, pero **sin nombre ni correo configurados** | Configurarlos (ver §8) |
-| Docker 29.4 + Compose 5.1 | OK, Docker Desktop corriendo | — |
-| pnpm | No instalado (Corepack 0.34 sí) | Activar con Corepack, sin instalaciones globales extra |
-| GitHub CLI (`gh`) | No instalado | No es necesario; se usa la web de GitHub para los Pull Requests |
-| Puertos 5432, 6379, 3000 | **Ocupados** por otros servicios | Usar puertos alternos (ver §4) para no interferir con tus otros proyectos |
+| Elemento                  | Estado                                         | Acción                                                                    |
+| ------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------- |
+| Node.js 24.15 / npm 11.12 | OK                                             | —                                                                         |
+| Git 2.53                  | OK, pero **sin nombre ni correo configurados** | Configurarlos (ver §8)                                                    |
+| Docker 29.4 + Compose 5.1 | OK, Docker Desktop corriendo                   | —                                                                         |
+| pnpm                      | No instalado (Corepack 0.34 sí)                | Activar con Corepack, sin instalaciones globales extra                    |
+| GitHub CLI (`gh`)         | No instalado                                   | No es necesario; se usa la web de GitHub para los Pull Requests           |
+| Puertos 5432, 6379, 3000  | **Ocupados** por otros servicios               | Usar puertos alternos (ver §4) para no interferir con tus otros proyectos |
 
 ## 3. Decisiones técnicas
 
-| Decisión | Elección | Motivo |
-|---|---|---|
-| Gestor de paquetes | **pnpm workspaces** | Estándar en monorepos profesionales; rápido, estricto con dependencias |
-| Backend | Fastify + TypeScript | Rápido, tipado, validación por esquemas nativa |
-| Validación | zod (compartido backend ↔ app) | Un solo contrato de datos para ambos lados |
-| Frontend | React + Vite + TypeScript + Tailwind | Base para la PWA y para Capacitor |
-| Pruebas | Vitest | Mismo motor en backend y frontend |
-| Calidad | ESLint + Prettier + TypeScript strict | Regla §4 de `CLAUDE.md` |
-| Servicios locales | PostgreSQL 17, Redis, MinIO en Docker | Igual que en Easypanel |
-| Versiones | Última estable de cada herramienta, verificada al instalar | Evitar dependencias obsoletas |
+| Decisión           | Elección                                                   | Motivo                                                                 |
+| ------------------ | ---------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Gestor de paquetes | **pnpm workspaces**                                        | Estándar en monorepos profesionales; rápido, estricto con dependencias |
+| Backend            | Fastify + TypeScript                                       | Rápido, tipado, validación por esquemas nativa                         |
+| Validación         | zod (compartido backend ↔ app)                             | Un solo contrato de datos para ambos lados                             |
+| Frontend           | React + Vite + TypeScript + Tailwind                       | Base para la PWA y para Capacitor                                      |
+| Pruebas            | Vitest                                                     | Mismo motor en backend y frontend                                      |
+| Calidad            | ESLint + Prettier + TypeScript strict                      | Regla §4 de `CLAUDE.md`                                                |
+| Servicios locales  | PostgreSQL 17, Redis, MinIO en Docker                      | Igual que en Easypanel                                                 |
+| Versiones          | Última estable de cada herramienta, verificada al instalar | Evitar dependencias obsoletas                                          |
 
 Cada decisión se documenta como ADR en `docs/decisions/`.
 
@@ -48,13 +48,13 @@ pj20-control-asistencia/
 └─ .github/  workflows/ci.yml · dependabot.yml
 ```
 
-| Servicio | Puerto en tu PC | Nota |
-|---|---|---|
-| Postgres | 55432 | 5432 está ocupado |
-| Redis | 56379 | 6379 está ocupado |
-| MinIO API / consola | 59000 / 59001 | |
-| Backend | 4000 | 3000 está ocupado |
-| App (Vite) | 5173 | Coincide con el origen OAuth de Google |
+| Servicio            | Puerto en tu PC | Nota                                         |
+| ------------------- | --------------- | -------------------------------------------- |
+| Postgres            | 15432           | 5432 está ocupado                            |
+| Redis               | 16379           | 6379 está ocupado                            |
+| MinIO API / consola | 19000 / 19001   |                                              |
+| Backend             | 4400            | 3000 y 4000 están ocupados (otros proyectos) |
+| App (Vite)          | 5173            | Coincide con el origen OAuth de Google       |
 
 Todos los puertos se publican **solo en `127.0.0.1`**: nadie en tu red puede conectarse a la base de datos.
 
@@ -76,8 +76,8 @@ Todos los puertos se publican **solo en `127.0.0.1`**: nadie en tu red puede con
 
 ## 6. Criterios de aceptación
 
-- [ ] `pnpm install` y `docker compose up -d` dejan todos los servicios en estado *healthy*.
-- [ ] `pnpm dev` levanta backend (4000) y app (5173); la app muestra el estado de `/health`.
+- [ ] `pnpm install` y `docker compose up -d` dejan todos los servicios en estado _healthy_.
+- [ ] `pnpm dev` levanta backend (4400) y app (5173); la app muestra el estado de `/health`.
 - [ ] `GET /health` responde 200 con los tres servicios OK, y 503 si uno cae (probado deteniendo Redis).
 - [ ] El backend se niega a arrancar si falta una variable de entorno obligatoria.
 - [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test` y `pnpm build` pasan sin errores ni advertencias.
@@ -87,12 +87,12 @@ Todos los puertos se publican **solo en `127.0.0.1`**: nadie en tu red puede con
 
 ## 7. Riesgos y mitigación
 
-| Riesgo | Mitigación |
-|---|---|
-| Choque con servicios que ya usas en 5432/6379/3000 | Puertos alternos (§4); no se toca nada existente |
-| Problemas de finales de línea Windows ↔ Linux (Docker, CI) | `.gitattributes` con LF + `.editorconfig` |
-| Subir un secreto por error | `.gitignore` estricto + gitleaks en CI |
-| Diferencias entre tu PC y CI | Versión de Node fijada (`.nvmrc`) y lockfile versionado |
+| Riesgo                                                     | Mitigación                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------- |
+| Choque con servicios que ya usas en 5432/6379/3000         | Puertos alternos (§4); no se toca nada existente        |
+| Problemas de finales de línea Windows ↔ Linux (Docker, CI) | `.gitattributes` con LF + `.editorconfig`               |
+| Subir un secreto por error                                 | `.gitignore` estricto + gitleaks en CI                  |
+| Diferencias entre tu PC y CI                               | Versión de Node fijada (`.nvmrc`) y lockfile versionado |
 
 **Reversión:** todo es nuevo; no se modifica nada existente. Si algo sale mal, se descarta la rama.
 

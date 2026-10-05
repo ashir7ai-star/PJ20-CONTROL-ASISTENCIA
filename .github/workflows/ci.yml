@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Calidad (formato, lint, tipos, pruebas, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  integration:
+    name: Integración (Postgres, Redis, S3 reales)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Throwaway credentials, valid only inside this ephemeral runner.
+    env:
+      POSTGRES_USER: pj20
+      POSTGRES_PASSWORD: ci-postgres
+      POSTGRES_DB: pj20
+      REDIS_PASSWORD: ci-redis
+      S3_ACCESS_KEY: ci-access
+      S3_SECRET_KEY: ci-secret-key
+      S3_BUCKET: pj20-selfies
+      APP_ORIGINS: http://localhost:5173
+      DATABASE_URL: postgres://pj20:ci-postgres@localhost:15432/pj20
+      REDIS_URL: redis://:ci-redis@localhost:16379
+      S3_ENDPOINT: http://localhost:19000
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: docker compose up -d --wait
+      - run: pnpm test:integration
+      - if: failure()
+        run: docker compose logs
+
+  docker:
+    name: Imágenes Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build -f backend/Dockerfile -t pj20-backend:ci .
+      - run: docker build -f app/Dockerfile -t pj20-app:ci .
+      - name: Las imágenes no corren como root
+        run: |
+          test "$(docker run --rm --entrypoint id pj20-backend:ci -u)" != "0"
+          test "$(docker run --rm --entrypoint id pj20-app:ci -u)" != "0"
+
+  secrets:
+    name: Escaneo de secretos (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: gitleaks (historial completo)
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 git /repo --redact --verbose

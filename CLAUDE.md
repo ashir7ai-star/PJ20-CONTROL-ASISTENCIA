@@ -41,15 +41,15 @@ Esta aplicación se construye al nivel de las mejores empresas de tecnología de
 
 ## 0. Stack acordado
 
-| Capa | Tecnología |
-|---|---|
-| Backend | Node.js LTS + TypeScript (strict) + Fastify, API REST `/api/v1` |
-| Base de datos | PostgreSQL (migraciones versionadas con Drizzle o Prisma) |
-| Caché / sesiones / rate limit | Redis |
+| Capa                              | Tecnología                                                                                                                                                                                     |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend                           | Node.js LTS + TypeScript (strict) + Fastify, API REST `/api/v1`                                                                                                                                |
+| Base de datos                     | PostgreSQL (migraciones versionadas con Drizzle o Prisma)                                                                                                                                      |
+| Caché / sesiones / rate limit     | Redis                                                                                                                                                                                          |
 | App (empleados y administradores) | **Una sola app** React + Vite + TypeScript, instalable como **PWA**. En Android se empaqueta además como **APK con Capacitor** (mismo código) para detectar ubicaciones falsas de forma nativa |
-| Fotos (selfies) | Almacenamiento de objetos privado compatible con S3 (MinIO en Easypanel) |
-| Autenticación | Google OAuth 2.0 / OpenID Connect (Gmail y correos corporativos, solo lista blanca) |
-| Integridad del dispositivo | Android Key Attestation (gratis, no requiere Play Store) |
+| Fotos (selfies)                   | Almacenamiento de objetos privado compatible con S3 (RustFS en Easypanel)                                                                                                                      |
+| Autenticación                     | Google OAuth 2.0 / OpenID Connect (Gmail y correos corporativos, solo lista blanca)                                                                                                            |
+| Integridad del dispositivo        | Android Key Attestation (gratis, no requiere Play Store)                                                                                                                                       |
 
 **Costo cero:** no se usan servicios pagos ni tiendas de aplicaciones. Todo corre en la infraestructura existente (Hostinger + Easypanel + GitHub).
 | Infraestructura | Docker → GitHub → Easypanel (VPS Hostinger) |
@@ -94,13 +94,13 @@ Prohibido confiar en lo que reporta el celular. La defensa es por capas y **la d
 2. **Opciones de desarrollador / app de ubicación simulada:** el APK detecta si están activas y lo reporta al servidor. Si hay ubicación simulada configurada → bloqueo.
 3. **Integridad del dispositivo y de la app (Android):** cada marcación se firma con una llave guardada en el hardware del celular (Android Keystore) y su certificado de Key Attestation se verifica **en el servidor**: confirma que es nuestra app original y que el celular no está rooteado/desbloqueado. Si falla → bloqueo.
 4. **Dispositivo vinculado:** cada empleado tiene un solo celular registrado (llave del Keystore en Android; passkey/WebAuthn en iPhone). Cambiar de celular requiere aprobación del administrador.
-4b. **iPhone (PWA):** el navegador no informa si la ubicación es simulada; la protección se apoya en las capas 4, 5 y 6. Falsificar ubicación en iPhone requiere un computador o jailbreak, mucho más difícil que Fake GPS en Android.
+   4b. **iPhone (PWA):** el navegador no informa si la ubicación es simulada; la protección se apoya en las capas 4, 5 y 6. Falsificar ubicación en iPhone requiere un computador o jailbreak, mucho más difícil que Fake GPS en Android.
 5. **Análisis en el servidor (señales de sospecha):**
    - Velocidad imposible entre marcaciones (ej. 200 km en 10 min).
    - Coordenadas idénticas repetidas o con precisión/altitud "demasiado perfecta".
    - País/ciudad de la IP incompatible con el GPS.
    - Ubicación muy antigua (timestamp del fix GPS con más de 30 s).
-   Las marcaciones sospechosas se guardan **marcadas** y aparecen en una bandeja de revisión del administrador.
+     Las marcaciones sospechosas se guardan **marcadas** y aparecen en una bandeja de revisión del administrador.
 6. **Selfie obligatoria** en cada marcación, tomada **en vivo con la cámara frontal** dentro de la app (prohibido elegir de la galería). Se guarda en almacenamiento privado; solo se accede con URLs firmadas de corta duración.
 7. **Ninguna capa es infalible por sí sola.** Toda nueva técnica de fraude detectada se documenta y se agrega como capa adicional.
 
@@ -139,7 +139,7 @@ Prohibido confiar en lo que reporta el celular. La defensa es por capas y **la d
 
 1. Imágenes Docker multi-stage, ejecutadas con usuario **no root**.
 2. Entornos separados en Easypanel: **staging** y **producción**, cada uno con su propia BD y sus propios secretos.
-3. Endpoint `/health` para monitoreo.
+3. Endpoint `/api/health` para monitoreo. Todas las rutas del backend viven bajo `/api` (Easypanel enruta `/api` al backend y el resto a la PWA).
 4. Las migraciones se ejecutan de forma controlada en cada despliegue; nunca se despliega con CI fallando.
 5. La PWA se sirve desde el mismo dominio que la API (Easypanel), no desde GitHub Pages.
 6. El APK de Android se firma con una llave de la empresa guardada fuera del repositorio (con respaldo seguro: si se pierde, no se pueden publicar actualizaciones). Se descarga desde nuestro propio servidor y la app avisa cuando hay una versión nueva; el servidor puede exigir una versión mínima.
@@ -156,6 +156,7 @@ Prohibido confiar en lo que reporta el celular. La defensa es por capas y **la d
 Regla obligatoria, al mismo nivel que la regla suprema. **Nunca se escribe código sin un plan aprobado, y nunca se entrega nada sin verificarlo.**
 
 ### Antes de desarrollar
+
 1. **Investigar primero:** leer el código existente, `docs/PLAN.md` y las decisiones en `docs/decisions/`. Nunca suponer cómo funciona algo: comprobarlo.
 2. **Plan escrito y estructurado** para cada fase o tarea relevante, con:
    - Objetivo y criterios de aceptación (cómo sabremos que está bien).
@@ -166,11 +167,13 @@ Regla obligatoria, al mismo nivel que la regla suprema. **Nunca se escribe códi
 3. **Aprobación del dueño del proyecto** antes de implementar. No se agregan funciones no acordadas.
 
 ### Durante el desarrollo
+
 4. Pasos pequeños y verificables; cada paso deja el sistema funcionando.
 5. Las pruebas se escriben junto con el código, no después.
 6. Si aparece algo no previsto en el plan, se detiene, se informa y se ajusta el plan.
 
 ### Después de desarrollar (verificación obligatoria)
+
 7. Ejecutar lint, typecheck, pruebas y build. Todo debe pasar.
 8. **Probar la funcionalidad real** (levantar la app, recorrer el flujo en celular y escritorio), no solo las pruebas automáticas.
 9. **Revisar regresiones:** confirmar que lo que ya funcionaba sigue funcionando.
