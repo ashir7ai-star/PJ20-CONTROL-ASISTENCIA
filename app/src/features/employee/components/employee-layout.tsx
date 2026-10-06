@@ -23,7 +23,7 @@ export function EmployeeLayout({
     <div className="bg-pulse safe-area min-h-dvh text-ink">
       <main
         className={cn(
-          'relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-8',
+          'relative mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-x-clip px-6 pb-8',
           className,
         )}
       >
