@@ -46,7 +46,13 @@ export function ClockScreen({ view, now: fixedNow, onMark, onOpenAdmin }: ClockS
       </section>
 
       <div className="mt-12 flex justify-center">
-        <PulseButton kind={action} disabled={searching} {...(onMark ? { onPress: onMark } : {})} />
+        <PulseButton
+          kind={action}
+          disabled={searching}
+          {...(onMark ? { onPress: onMark } : {})}
+          {...(view.shift.kind === 'on' ? { since: view.shift.since } : {})}
+          {...(fixedNow ? { reference: fixedNow } : {})}
+        />
       </div>
       {searching && (
         <p className="mt-4 text-center text-[14px] text-ink-muted" role="status">
@@ -94,7 +100,9 @@ function ShiftLine({ view, now }: { view: EmployeeView; now: Date }) {
     return (
       <p className="mt-4 inline-flex items-center gap-2 text-[14px] font-medium text-success">
         <span className="size-2 rounded-full bg-success" aria-hidden="true" />
-        En turno · {formatDuration(minutes)}
+        En turno desde {formatTime(view.shift.since)}
+        {/* The live counter in the button is visual only; screen readers get minutes here. */}
+        <span className="sr-only"> · llevas {formatDuration(minutes)} trabajando</span>
       </p>
     );
   }

@@ -4,6 +4,7 @@ import {
   formatAccuracy,
   formatClock,
   formatDuration,
+  formatElapsed,
   formatLongDate,
   formatTime,
 } from './format.js';
@@ -57,5 +58,18 @@ describe('formatDuration', () => {
 describe('formatAccuracy', () => {
   it('redondea a metros enteros', () => {
     expect(formatAccuracy(6.4)).toBe('± 6 m');
+  });
+});
+
+describe('formatElapsed', () => {
+  it.each([
+    [0, '0:00:00'],
+    [59_999, '0:00:59'],
+    [61_000, '0:01:01'],
+    [(4 * 3600 + 43 * 60 + 20) * 1000, '4:43:20'],
+    [(12 * 3600 + 5) * 1000, '12:00:05'],
+    [-5000, '0:00:00'],
+  ])('%i ms → %s', (ms, expected) => {
+    expect(formatElapsed(ms)).toBe(expected);
   });
 });
