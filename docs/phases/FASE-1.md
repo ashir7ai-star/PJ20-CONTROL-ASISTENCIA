@@ -128,3 +128,8 @@ Un **catálogo** interno (`/diseno`, solo en desarrollo) muestra todos los token
 - Pantalla de selfie rediseñada: guía de rostro pequeña en la parte superior, marco completo con esquinas e indicación «El lugar donde estás»; instrucción «Estira el brazo y deja ver lo que hay detrás de ti».
 - Consentimiento (Ley 1581) y permisos actualizados para informar que la foto incluye el lugar. Regla agregada en `CLAUDE.md` §2B.6.
 - Vista previa del panel: «Selfie con el lugar».
+
+### Ajuste (2026-10-05): el administrador puede volver a su panel desde «Marcar»
+
+- Detectado al revisar el prototipo: un administrador que marcaba su asistencia no tenía forma de volver al panel.
+- Botón «Ir al panel de administración» al pie de la pantalla Marcar, **solo para administradores** (los empleados nunca lo ven; probado). Se ubicó abajo y no junto al logo porque en celulares de 360 px se encimaría con él.

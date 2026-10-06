@@ -55,3 +55,25 @@ describe('flujo completo del prototipo del empleado', () => {
     expect(screen.getAllByRole('link').length).toBeGreaterThanOrEqual(20);
   });
 });
+
+describe('administrador marcando su asistencia', () => {
+  it('conserva el rol durante el flujo y puede volver al panel', async () => {
+    const router = createMemoryRouter(
+      [
+        { path: '/prototipo/empleado/:pantalla', element: <EmployeePrototype /> },
+        { path: '/prototipo/admin', element: <p>Panel del administrador</p> },
+      ],
+      { initialEntries: ['/prototipo/empleado/marcar?rol=admin'] },
+    );
+    render(<RouterProvider router={router} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Marcar entrada' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Tomar selfie' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Listo' }));
+
+    const back = await screen.findByRole('button', { name: 'Ir al panel de administración' });
+    expect(router.state.location.search).toBe('?turno=en&rol=admin');
+    fireEvent.click(back);
+    expect(await screen.findByText('Panel del administrador')).toBeInTheDocument();
+  });
+});

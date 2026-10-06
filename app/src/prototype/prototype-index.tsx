@@ -17,6 +17,7 @@ const employeeFlow: Entry[] = [
   { label: 'Marcar · en turno', to: '/prototipo/empleado/marcar?turno=en' },
   { label: 'Marcar · buscando GPS', to: '/prototipo/empleado/marcar?gps=buscando' },
   { label: 'Marcar · señal débil', to: '/prototipo/empleado/marcar?gps=debil' },
+  { label: 'Marcar · como administrador', to: '/prototipo/empleado/marcar?rol=admin' },
   { label: 'Selfie', to: '/prototipo/empleado/selfie?tipo=entrada' },
   { label: 'Confirmación de entrada', to: '/prototipo/empleado/confirmacion?tipo=entrada' },
   { label: 'Confirmación de salida', to: '/prototipo/empleado/confirmacion?tipo=salida' },

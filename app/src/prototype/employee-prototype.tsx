@@ -30,9 +30,19 @@ export function EmployeePrototype() {
   const { pantalla = '', problema = '' } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  // Administrators also mark; the "rol" param keeps that context through the flow.
+  const isAdmin = params.get('rol') === 'admin';
   const go = (path: string) => {
-    void navigate(`${base}/${path}`);
+    const role = isAdmin ? `${path.includes('?') ? '&' : '?'}rol=admin` : '';
+    void navigate(`${base}/${path}${role}`);
   };
+  const adminProps = isAdmin
+    ? {
+        onOpenAdmin: () => {
+          void navigate('/prototipo/admin');
+        },
+      }
+    : {};
 
   switch (pantalla) {
     case 'login':
@@ -69,6 +79,7 @@ export function EmployeePrototype() {
         <ClockScreen
           view={view}
           now={working ? AFTERNOON : MORNING}
+          {...adminProps}
           onMark={() => {
             go(gps === 'debil' ? 'problema/weak-signal' : `selfie?tipo=${paramFromKind(kind)}`);
           }}

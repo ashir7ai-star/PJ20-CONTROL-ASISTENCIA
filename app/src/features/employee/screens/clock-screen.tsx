@@ -1,5 +1,6 @@
-import { Camera, Clock, LocateFixed, MapPin } from 'lucide-react';
+import { Camera, Clock, LayoutDashboard, LocateFixed, MapPin } from 'lucide-react';
 
+import { Button } from '../../../components/ui/button.js';
 import {
   formatAccuracy,
   formatClock,
@@ -17,10 +18,12 @@ interface ClockScreenProps {
   /** Fixed time for prototypes/tests; live clock otherwise. */
   now?: Date;
   onMark?: () => void;
+  /** Only for administrators: return to the admin panel. */
+  onOpenAdmin?: () => void;
 }
 
 /** Main employee screen ("Marcar"): live clock, shift status and the Pulso button. */
-export function ClockScreen({ view, now: fixedNow, onMark }: ClockScreenProps) {
+export function ClockScreen({ view, now: fixedNow, onMark, onOpenAdmin }: ClockScreenProps) {
   const now = useNow('minute', fixedNow);
   const clock = formatClock(now);
   const action = nextAction(view.shift);
@@ -68,6 +71,17 @@ export function ClockScreen({ view, now: fixedNow, onMark }: ClockScreenProps) {
             Selfie al marcar
           </li>
         </ul>
+        {onOpenAdmin && (
+          <Button
+            variant="secondary"
+            block
+            className="mt-6"
+            icon={<LayoutDashboard className="size-5" aria-hidden="true" />}
+            onClick={onOpenAdmin}
+          >
+            Ir al panel de administración
+          </Button>
+        )}
       </footer>
     </EmployeeLayout>
   );

@@ -134,3 +134,17 @@ describe('Selfie', () => {
     expect(screen.getByText(/Muestra tu rostro y el lugar donde estás/)).toBeInTheDocument();
   });
 });
+
+describe('Marcar · acceso al panel', () => {
+  it('un empleado NO ve el botón del panel de administración', () => {
+    render(<ClockScreen view={offDuty} now={MORNING} />);
+    expect(screen.queryByRole('button', { name: /panel de administración/i })).toBeNull();
+  });
+
+  it('un administrador ve el botón y puede volver a su panel', () => {
+    const onOpenAdmin = vi.fn();
+    render(<ClockScreen view={offDuty} now={MORNING} onOpenAdmin={onOpenAdmin} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ir al panel de administración' }));
+    expect(onOpenAdmin).toHaveBeenCalledOnce();
+  });
+});

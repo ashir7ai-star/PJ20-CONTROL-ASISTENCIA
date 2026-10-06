@@ -49,7 +49,7 @@ export function AdminPrototype() {
       basePath={BASE}
       admin={{ name: admin?.name ?? 'Administrador', initials: initials(admin?.name ?? 'A') }}
       counts={{ review: pending.length, devices: requests.length }}
-      markHref="/prototipo/empleado/marcar"
+      markHref="/prototipo/empleado/marcar?rol=admin"
     >
       <Routes>
         <Route
