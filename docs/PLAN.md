@@ -125,7 +125,7 @@ Cada fase termina con: verificación completa (lint, typecheck, pruebas, build, 
 | Fase                     | Estado              |
 | ------------------------ | ------------------- |
 | 0 — Fundaciones          | ✅ Cerrada          |
-| 1 — Diseño               | ✅ Cerrada · v0.1.0 |
+| 1 — Diseño               | ✅ Cerrada · v0.2.0 |
 | 2 — Backend núcleo       | Pendiente           |
 | 3 — App empleado         | Pendiente           |
 | 4 — Antifraude servidor  | Pendiente           |

@@ -143,3 +143,19 @@ Un **catálogo** interno (`/diseno`, solo en desarrollo) muestra todos los token
   - Siempre debe quedar al menos un administrador activo.
   - **Eliminar** solo usuarios sin marcaciones. Con marcaciones se **desactivan**: pierden el acceso y su historial se conserva (Ley 1581 + auditoría + marcaciones inmutables, `CLAUDE.md` §2.4).
 - Script `pnpm dev:movil` para probar el prototipo en celulares de la misma red wifi.
+
+---
+
+## 10. Después de v0.1.0 — ajustes tras probar en celular real (v0.2.0)
+
+| PR  | Cambio                                                                                                                                           | Motivo                                                                 |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| #7  | Publicación automática del prototipo en GitHub Pages (repo público temporalmente; se volverá privado antes de la Fase 4)                         | Probar en celular sin costo                                            |
+| #8  | Apariencia: Automático / Claro / Oscuro (se recuerda por dispositivo, sin parpadeo); menú del prototipo para saltar entre vista empleado y panel | El dueño no encontraba el panel ni el modo oscuro en el celular        |
+| #9  | Botón Pulso con **campo de energía** (canvas, líneas de luz que aceleran) y **calidad adaptativa** para celulares lentos (4× CPU: 29 → 55 fps)   | Pedido de una animación «de energía, moderna» con imagen de referencia |
+| #10 | Energía más calmada; **botón premium** (degradado, brillo de vidrio, borde de luz) con **contador en vivo de tiempo trabajado**                  | El botón se veía básico y la animación muy rápida                      |
+
+Notas:
+
+- El índice del prototipo, el menú ⊞ y los datos de ejemplo son temporales: se retiran en la Fase 3 (inicio de sesión real: empleado → Marcar, administrador → panel).
+- El contador del prototipo parte de un turno de ejemplo; en la app real usará la hora de entrada registrada por el servidor.
