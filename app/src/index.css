@@ -53,6 +53,10 @@
   --color-ring: #0ea5e9;
   --color-focus: #0369a1;
 
+  /* Energy field around the Pulso button (light: deeper blues to read on white) */
+  --color-energy: #0ea5e9;
+  --color-energy-bright: #0369a1;
+
   /* Feedback */
   --color-success: #047857;
   --color-success-soft: #ecfdf5;
@@ -100,6 +104,8 @@
   --color-check-out-ink: #0a1f3c;
   --color-ring: #0ea5e9;
   --color-focus: #7dd3fc;
+  --color-energy: #0ea5e9;
+  --color-energy-bright: #e0f2fe;
 
   --color-success: #34d399;
   --color-success-soft: #0b2e27;
@@ -141,15 +147,16 @@
   }
 }
 
-/* "Pulso": a soft ring expanding from the main button, like a heartbeat. */
-@keyframes pulse-ring {
-  from {
-    transform: scale(1);
-    opacity: 0.7;
+/* Soft breathing glow behind the Pulso button. */
+@keyframes energy-breathe {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.55;
   }
-  to {
-    transform: scale(1.42);
-    opacity: 0;
+  50% {
+    transform: scale(1.06);
+    opacity: 0.9;
   }
 }
 

@@ -150,14 +150,14 @@ describe('Marcar · acceso al panel', () => {
 });
 
 describe('Botón Pulso', () => {
-  it('late (anillos animados) cuando está listo para marcar', () => {
+  it('muestra el campo de energía cuando está listo para marcar', () => {
     render(<ClockScreen view={offDuty} now={MORNING} />);
-    expect(screen.getByTestId('pulse-ring')).toBeInTheDocument();
+    expect(screen.getByTestId('energy-field')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('no anima mientras busca la ubicación (botón deshabilitado)', () => {
     render(<ClockScreen view={searchingGps} now={MORNING} />);
-    expect(screen.queryByTestId('pulse-ring')).toBeNull();
+    expect(screen.queryByTestId('energy-field')).toBeNull();
   });
 
   it('la pantalla Marcar ofrece el control de apariencia', () => {
