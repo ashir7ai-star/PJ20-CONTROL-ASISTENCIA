@@ -34,8 +34,17 @@ Esta aplicación se construye al nivel de las mejores empresas de tecnología de
 9. **Movimiento sutil y con propósito:** transiciones de 150–250 ms, respetando `prefers-reduced-motion`.
 10. **Mobile-first:** la app del empleado se diseña primero para celular; el panel administrativo se ve impecable en escritorio y es usable en tablet/celular.
 11. **Accesibilidad WCAG 2.1 AA:** contraste mínimo 4.5:1, áreas táctiles de al menos 44×44 px, navegación por teclado y etiquetas para lectores de pantalla.
-12. **Rendimiento percibido:** Lighthouse ≥ 90 en todas las categorías; la app del empleado carga en menos de 2 s en 4G.
+12. **Rendimiento percibido:** Lighthouse ≥ 90 en Rendimiento, Accesibilidad y Buenas prácticas; la app del empleado carga en menos de 2 s en 4G. (SEO no aplica: la app es interna y está bloqueada a buscadores a propósito con `robots.txt` y `noindex`, por privacidad.)
 13. **Textos cuidados:** español claro, breve y humano. Sin jerga técnica, sin "lorem ipsum", sin textos de relleno.
+14. **Aplicación 100% en español:** toda la interfaz, mensajes de error, correos, notificaciones, exportaciones y formatos (fechas, horas y números con `es-CO`, zona `America/Bogota`). Ningún texto en inglés visible para usuarios. El código fuente sí va en inglés (§4.3).
+
+### C. Marca BLAZAR ENERGY
+
+1. La app pertenece a **BLAZAR ENERGY**. Encabezado de la app: **logo arriba y, justo debajo, "Control de Asistencia"**.
+2. Colores oficiales (extraídos del logo): azul marino `#0A1F3C`, verde `#10B981`, azul cielo `#0EA5E9`.
+3. Accesibilidad de la marca: texto blanco sobre `#10B981` o `#0EA5E9` **no cumple** AA. Usar texto azul marino sobre verde, o verde profundo `#047857` con texto blanco.
+4. Logos: `app/src/assets/brand/logo-light.png` (fondos claros) y `logo-dark.png` (fondos oscuros, letras blancas). Original en `docs/design/brand/`. Pendiente: versión vectorial (SVG) para íconos de la app.
+5. Dirección visual aprobada: **"Pulso"** (reloj protagonista + botón circular que retoma el anillo del logo). Ver `docs/design/`.
 
 ---
 
@@ -101,7 +110,7 @@ Prohibido confiar en lo que reporta el celular. La defensa es por capas y **la d
    - País/ciudad de la IP incompatible con el GPS.
    - Ubicación muy antigua (timestamp del fix GPS con más de 30 s).
      Las marcaciones sospechosas se guardan **marcadas** y aparecen en una bandeja de revisión del administrador.
-6. **Selfie obligatoria** en cada marcación, tomada **en vivo con la cámara frontal** dentro de la app (prohibido elegir de la galería). Se guarda en almacenamiento privado; solo se accede con URLs firmadas de corta duración.
+6. **Selfie obligatoria** en cada marcación, tomada **en vivo con la cámara frontal** dentro de la app (prohibido elegir de la galería). **Debe mostrar el rostro y el lugar de fondo** (encuadre amplio, brazo estirado) para que el administrador verifique que el empleado está en su sitio de trabajo. Se guarda en almacenamiento privado; solo se accede con URLs firmadas de corta duración.
 7. **Ninguna capa es infalible por sí sola.** Toda nueva técnica de fraude detectada se documenta y se agrega como capa adicional.
 
 ## 3. Privacidad (Ley 1581 de 2012 — Habeas Data, Colombia)

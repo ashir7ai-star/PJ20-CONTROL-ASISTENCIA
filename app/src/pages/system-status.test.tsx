@@ -2,7 +2,7 @@ import type { HealthResponse } from '@pj20/shared';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { App } from './App.js';
+import { SystemStatusPage as App } from './system-status.js';
 
 function mockFetchJson(body: HealthResponse, status = 200) {
   return vi

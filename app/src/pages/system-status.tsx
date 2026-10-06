@@ -2,7 +2,7 @@ import type { DependencyName, HealthResponse } from '@pj20/shared';
 import { dependencyNames } from '@pj20/shared';
 import { useEffect, useState } from 'react';
 
-import { fetchHealth } from './api/health.js';
+import { fetchHealth } from '../api/health.js';
 
 type State =
   { kind: 'loading' } | { kind: 'ready'; health: HealthResponse } | { kind: 'unreachable' };
@@ -13,7 +13,7 @@ const dependencyLabels: Record<DependencyName, string> = {
   storage: 'Almacenamiento',
 };
 
-export function App() {
+export function SystemStatusPage() {
   const [state, setState] = useState<State>({ kind: 'loading' });
   // Incrementing this re-runs the effect; each run cancels the previous request.
   const [attempt, setAttempt] = useState(0);

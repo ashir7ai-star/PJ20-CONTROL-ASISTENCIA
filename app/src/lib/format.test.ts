@@ -1,0 +1,61 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  formatAccuracy,
+  formatClock,
+  formatDuration,
+  formatLongDate,
+  formatTime,
+} from './format.js';
+
+// Colombia is UTC-5 all year (no daylight saving).
+const at = (iso: string) => new Date(iso);
+
+describe('formatClock / formatTime (hora de Colombia)', () => {
+  it('formatea la mañana con "a. m."', () => {
+    expect(formatClock(at('2026-10-05T12:58:00Z'))).toEqual({ time: '7:58', period: 'a. m.' });
+    expect(formatTime(at('2026-10-05T12:58:00Z'))).toBe('7:58 a. m.');
+  });
+
+  it('formatea la tarde con "p. m."', () => {
+    expect(formatTime(at('2026-10-05T17:41:00Z'))).toBe('12:41 p. m.');
+    expect(formatTime(at('2026-10-05T22:04:00Z'))).toBe('5:04 p. m.');
+  });
+
+  it('medianoche es 12 a. m.', () => {
+    expect(formatTime(at('2026-10-06T05:00:00Z'))).toBe('12:00 a. m.');
+  });
+
+  it('usa la zona de Bogotá aunque el día UTC sea otro', () => {
+    // 2026-10-06 03:30 UTC = 2026-10-05 10:30 p. m. en Colombia
+    expect(formatTime(at('2026-10-06T03:30:00Z'))).toBe('10:30 p. m.');
+  });
+});
+
+describe('formatLongDate', () => {
+  it('escribe el día en español con mayúscula inicial', () => {
+    expect(formatLongDate(at('2026-10-05T15:00:00Z'))).toBe('Lunes, 5 de octubre');
+  });
+
+  it('usa la fecha de Colombia, no la UTC', () => {
+    expect(formatLongDate(at('2026-10-06T03:30:00Z'))).toBe('Lunes, 5 de octubre');
+  });
+});
+
+describe('formatDuration', () => {
+  it.each([
+    [283, '4 h 43 min'],
+    [45, '45 min'],
+    [120, '2 h'],
+    [0, '0 min'],
+    [-5, '0 min'],
+  ])('%i minutos → %s', (minutes, expected) => {
+    expect(formatDuration(minutes)).toBe(expected);
+  });
+});
+
+describe('formatAccuracy', () => {
+  it('redondea a metros enteros', () => {
+    expect(formatAccuracy(6.4)).toBe('± 6 m');
+  });
+});

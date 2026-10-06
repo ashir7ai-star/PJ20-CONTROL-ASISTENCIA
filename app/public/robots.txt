@@ -1,0 +1,3 @@
+# Aplicación interna de BLAZAR ENERGY: no debe aparecer en buscadores.
+User-agent: *
+Disallow: /

@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "test:integration": "pnpm --filter @pj20/backend test:integration"
+    "test:integration": "pnpm --filter @pj20/backend test:integration",
+    "dev:movil": "pnpm --filter @pj20/app dev --host"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
