@@ -5,6 +5,8 @@ import { defineConfig } from 'vitest/config';
 const API_TARGET = process.env.VITE_DEV_API_TARGET ?? 'http://127.0.0.1:4400';
 
 export default defineConfig({
+  // "/" for Easypanel (own domain); "/PJ20-CONTROL-ASISTENCIA/" for the GitHub Pages prototype.
+  base: process.env.VITE_BASE ?? '/',
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
