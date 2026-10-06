@@ -27,7 +27,8 @@ export interface FieldGeometry {
 }
 
 const STREAKS = 72;
-const ACCELERATION = 1.9; // speed multiplier per second
+// Calm, steady flow (owner feedback: the first version was too fast).
+const ACCELERATION = 0.85; // speed multiplier per second
 
 export function spawnStreak(
   geometry: FieldGeometry,
@@ -38,7 +39,7 @@ export function spawnStreak(
   return {
     angle: random() * Math.PI * 2,
     distance: geometry.inner + (scatter ? random() * span : random() * 12),
-    speed: 55 + random() * 120,
+    speed: 28 + random() * 62,
     width: 0.8 + random() * 1.9,
     bright: random() < 0.35,
   };
@@ -105,7 +106,7 @@ function draw(
     const alpha = streakAlpha(s.distance, geometry);
     if (alpha <= 0.01) continue;
     // Faster streaks draw longer trails.
-    const length = Math.min(s.distance - geometry.inner, 10 + s.speed * 0.16);
+    const length = Math.min(s.distance - geometry.inner, 12 + s.speed * 0.3);
     const cos = Math.cos(s.angle);
     const sin = Math.sin(s.angle);
     const level = Math.ceil(alpha * ALPHA_LEVELS) / ALPHA_LEVELS;

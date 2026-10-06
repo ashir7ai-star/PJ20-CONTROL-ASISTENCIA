@@ -65,3 +65,12 @@ export function formatDuration(totalMinutes: number): string {
 export function formatAccuracy(metres: number): string {
   return `± ${Math.round(metres)} m`;
 }
+
+/** Live work timer: 17_000_000 ms → "4:43:20" (hours not padded, never negative). */
+export function formatElapsed(milliseconds: number): string {
+  const total = Math.max(0, Math.floor(milliseconds / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${String(h)}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}

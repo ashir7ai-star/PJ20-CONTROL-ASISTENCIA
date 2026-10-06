@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -57,7 +57,8 @@ describe('Marcar', () => {
   it('en turno: ofrece marcar salida y muestra el tiempo trabajado', () => {
     render(<ClockScreen view={onDuty} now={AFTERNOON} />);
     expect(screen.getByRole('button', { name: 'Marcar salida' })).toBeEnabled();
-    expect(screen.getByText(/En turno · 4 h 43 min/)).toBeInTheDocument();
+    expect(screen.getByText(/En turno desde 7:58 a. m./)).toBeInTheDocument();
+    expect(screen.getByText(/llevas 4 h 43 min trabajando/)).toBeInTheDocument();
   });
 
   it('sin ubicación todavía: el botón se deshabilita y se informa', () => {
@@ -163,5 +164,32 @@ describe('Botón Pulso', () => {
   it('la pantalla Marcar ofrece el control de apariencia', () => {
     render(<ClockScreen view={offDuty} now={MORNING} />);
     expect(screen.getByRole('button', { name: 'Apariencia' })).toBeInTheDocument();
+  });
+});
+
+describe('Contador de tiempo trabajado', () => {
+  it('en turno, el botón muestra el tiempo trabajado y avanza cada segundo', () => {
+    vi.useFakeTimers();
+    try {
+      render(<ClockScreen view={onDuty} now={AFTERNOON} />);
+      expect(screen.getByText('Tiempo trabajado')).toBeInTheDocument();
+      expect(screen.getByText('4:43:00')).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(screen.getByText('4:43:03')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('el nombre accesible del botón es solo la acción (no lee los segundos)', () => {
+    render(<ClockScreen view={onDuty} now={AFTERNOON} />);
+    expect(screen.getByRole('button', { name: 'Marcar salida' })).toBeInTheDocument();
+  });
+
+  it('fuera de turno no hay contador', () => {
+    render(<ClockScreen view={offDuty} now={MORNING} />);
+    expect(screen.queryByText('Tiempo trabajado')).toBeNull();
   });
 });

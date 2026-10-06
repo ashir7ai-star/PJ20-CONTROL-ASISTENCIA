@@ -50,6 +50,11 @@
   --color-check-in-ink: #0a1f3c;
   --color-check-out: #0a1f3c;
   --color-check-out-ink: #ffffff;
+  /* Pulso button gradients (top → bottom); text contrast verified on both ends */
+  --color-check-in-from: #6ee7b7;
+  --color-check-in-to: #10b981;
+  --color-check-out-from: #1d4a80;
+  --color-check-out-to: #0a1f3c;
   --color-ring: #0ea5e9;
   --color-focus: #0369a1;
 
@@ -66,6 +71,9 @@
   --color-danger-soft: #fef2f2;
   --color-info: #0369a1;
   --color-info-soft: #f0f9ff;
+
+  /* Glass highlight on the Pulso button (same in both themes) */
+  --color-sheen: #ffffff;
 
   /* Camera viewfinder (always dark, both themes) */
   --color-viewfinder: #050b16;
@@ -102,6 +110,10 @@
   --color-check-in-ink: #0a1f3c;
   --color-check-out: #ffffff;
   --color-check-out-ink: #0a1f3c;
+  --color-check-in-from: #6ee7b7;
+  --color-check-in-to: #34d399;
+  --color-check-out-from: #ffffff;
+  --color-check-out-to: #cbd5e1;
   --color-ring: #0ea5e9;
   --color-focus: #7dd3fc;
   --color-energy: #0ea5e9;
