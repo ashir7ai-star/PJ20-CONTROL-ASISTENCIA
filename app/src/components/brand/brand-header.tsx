@@ -2,20 +2,18 @@ import logoDark from '../../assets/brand/logo-dark.png';
 import logoLight from '../../assets/brand/logo-light.png';
 import { cn } from '../../lib/cn.js';
 
-/** Official BLAZAR logo, switching to the white-wordmark version in dark mode. */
+/**
+ * Official BLAZAR logo. Follows the app theme (not only the OS): the
+ * white-wordmark version is shown in dark mode. The hidden image is
+ * display:none, so screen readers announce the logo once.
+ */
 export function Logo({ className }: { className?: string }) {
+  const common = { alt: 'BLAZAR ENERGY', width: 749, height: 110, decoding: 'async' } as const;
   return (
-    <picture>
-      <source srcSet={logoDark} media="(prefers-color-scheme: dark)" />
-      <img
-        src={logoLight}
-        alt="BLAZAR ENERGY"
-        width={749}
-        height={110}
-        decoding="async"
-        className={cn('h-9 w-auto', className)}
-      />
-    </picture>
+    <>
+      <img src={logoLight} {...common} className={cn('h-9 w-auto dark:hidden', className)} />
+      <img src={logoDark} {...common} className={cn('hidden h-9 w-auto dark:block', className)} />
+    </>
   );
 }
 

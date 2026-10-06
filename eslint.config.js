@@ -37,6 +37,11 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
+    // Static scripts served as-is to the browser.
+    files: ['app/public/**/*.js'],
+    languageOptions: { globals: globals.browser },
+  },
+  {
     files: ['backend/**/*.ts', 'packages/**/*.ts'],
     languageOptions: { globals: globals.node },
   },

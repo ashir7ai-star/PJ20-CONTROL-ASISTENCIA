@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* `dark:` follows the app theme (data-theme), not only the OS setting. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 /* Inter, self-hosted, Latin subset only (covers all Spanish characters: á é í ó ú ñ ü ¿ ¡ €). */
 @font-face {
   font-family: 'Inter Variable';
@@ -72,38 +75,42 @@
   --pulse-glow: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-canvas: #050b16;
-    --color-surface: #0d1b33;
-    --color-surface-raised: #12233f;
-    --color-line: #1f3456;
-    --color-line-strong: #2c4670;
+/*
+ * Dark theme. The data-theme attribute is set before first paint by
+ * public/theme-init.js (preference: automático / claro / oscuro) and kept in
+ * sync by src/lib/theme.ts.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-canvas: #050b16;
+  --color-surface: #0d1b33;
+  --color-surface-raised: #12233f;
+  --color-line: #1f3456;
+  --color-line-strong: #2c4670;
 
-    --color-ink: #f5f8fc;
-    --color-ink-muted: #a9b8cc;
-    --color-link: #7dd3fc;
+  --color-ink: #f5f8fc;
+  --color-ink-muted: #a9b8cc;
+  --color-link: #7dd3fc;
 
-    --color-primary: #ffffff;
-    --color-primary-ink: #0a1f3c;
-    --color-check-in: #34d399;
-    --color-check-in-ink: #0a1f3c;
-    --color-check-out: #ffffff;
-    --color-check-out-ink: #0a1f3c;
-    --color-ring: #0ea5e9;
-    --color-focus: #7dd3fc;
+  --color-primary: #ffffff;
+  --color-primary-ink: #0a1f3c;
+  --color-check-in: #34d399;
+  --color-check-in-ink: #0a1f3c;
+  --color-check-out: #ffffff;
+  --color-check-out-ink: #0a1f3c;
+  --color-ring: #0ea5e9;
+  --color-focus: #7dd3fc;
 
-    --color-success: #34d399;
-    --color-success-soft: #0b2e27;
-    --color-warning: #fbbf24;
-    --color-warning-soft: #33260a;
-    --color-danger: #f87171;
-    --color-danger-soft: #3a1414;
-    --color-info: #38bdf8;
-    --color-info-soft: #0b2a42;
+  --color-success: #34d399;
+  --color-success-soft: #0b2e27;
+  --color-warning: #fbbf24;
+  --color-warning-soft: #33260a;
+  --color-danger: #f87171;
+  --color-danger-soft: #3a1414;
+  --color-info: #38bdf8;
+  --color-info-soft: #0b2a42;
 
-    --pulse-glow: radial-gradient(120% 80% at 50% 0%, #12305a 0%, #0a1f3c 40%, #050b16 100%);
-  }
+  --pulse-glow: radial-gradient(120% 80% at 50% 0%, #12305a 0%, #0a1f3c 40%, #050b16 100%);
 }
 
 /* The "Pulso" screen background: plain canvas in light, navy glow in dark. */
@@ -134,6 +141,18 @@
   }
 }
 
+/* "Pulso": a soft ring expanding from the main button, like a heartbeat. */
+@keyframes pulse-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.42);
+    opacity: 0;
+  }
+}
+
 /* Camera viewfinder glow behind the face guide. */
 @utility bg-viewfinder-glow {
   background-image: radial-gradient(circle at 50% 40%, #1d3a63 0%, #0a1f3c 55%, #050b16 100%);
@@ -147,7 +166,7 @@
 
 @layer base {
   html {
-    color-scheme: light dark;
+    color-scheme: light;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;

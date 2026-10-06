@@ -11,8 +11,9 @@ interface PulseButtonProps {
 
 /**
  * The main "Pulso" action: a large circular button framed by the open
- * blue ring of the BLAZAR logo. The ring slowly turns while the button is
- * ready (disabled when the user prefers reduced motion).
+ * blue ring of the BLAZAR logo. While ready, the ring turns and a soft
+ * "heartbeat" expands from the button. All motion stops when the phone asks
+ * for reduced motion, and while the button is disabled.
  */
 export function PulseButton({ kind, disabled = false, onPress }: PulseButtonProps) {
   const Icon = kind === 'check_in' ? LogIn : LogOut;
@@ -23,10 +24,24 @@ export function PulseButton({ kind, disabled = false, onPress }: PulseButtonProp
       disabled={disabled}
       className="group relative grid size-60 place-items-center rounded-full transition-transform duration-200 ease-(--ease-standard) active:scale-95 disabled:cursor-not-allowed"
     >
+      {/* Heartbeat: two soft rings expanding from the button, staggered. */}
+      {!disabled && (
+        <>
+          <span
+            data-testid="pulse-ring"
+            className="absolute inset-6 rounded-full border-[3px] border-ring animate-[pulse-ring_2.4s_var(--ease-standard)_infinite] motion-reduce:hidden"
+            aria-hidden="true"
+          />
+          <span
+            className="absolute inset-6 rounded-full border-[3px] border-ring animate-[pulse-ring_2.4s_var(--ease-standard)_1.2s_infinite] opacity-0 motion-reduce:hidden"
+            aria-hidden="true"
+          />
+        </>
+      )}
       <svg
         className={cn(
           'absolute inset-0 size-full -rotate-45',
-          !disabled && 'animate-[spin_24s_linear_infinite] motion-reduce:animate-none',
+          !disabled && 'animate-[spin_9s_linear_infinite] motion-reduce:animate-none',
         )}
         viewBox="0 0 100 100"
         aria-hidden="true"

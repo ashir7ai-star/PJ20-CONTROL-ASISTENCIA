@@ -1,6 +1,7 @@
 import { Camera, Clock, LayoutDashboard, LocateFixed, MapPin } from 'lucide-react';
 
 import { Button } from '../../../components/ui/button.js';
+import { ThemeMenu } from '../../../components/ui/theme-menu.js';
 import {
   formatAccuracy,
   formatClock,
@@ -30,7 +31,7 @@ export function ClockScreen({ view, now: fixedNow, onMark, onOpenAdmin }: ClockS
   const searching = view.location.state === 'searching';
 
   return (
-    <EmployeeLayout>
+    <EmployeeLayout topRight={<ThemeMenu />}>
       <section className="mt-10 flex flex-col items-center text-center" aria-label="Hora actual">
         <p className="text-[15px] text-ink-muted">
           Hola, {view.firstName} · {formatLongDate(now)}

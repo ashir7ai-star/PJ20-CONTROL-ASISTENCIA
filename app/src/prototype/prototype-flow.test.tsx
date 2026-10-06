@@ -77,3 +77,33 @@ describe('administrador marcando su asistencia', () => {
     expect(await screen.findByText('Panel del administrador')).toBeInTheDocument();
   });
 });
+
+describe('menú del prototipo', () => {
+  it('desde Marcar lleva al panel del administrador', async () => {
+    const router = createMemoryRouter(
+      [
+        { path: '/prototipo/empleado/:pantalla', element: <EmployeePrototype /> },
+        { path: '/prototipo/admin', element: <p>Panel del administrador</p> },
+      ],
+      { initialEntries: ['/prototipo/empleado/marcar'] },
+    );
+    render(<RouterProvider router={router} />);
+    fireEvent.keyDown(await screen.findByRole('button', { name: 'Menú del prototipo' }), {
+      key: 'Enter',
+    });
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Panel del administrador' }));
+    expect(
+      await screen.findByText('Panel del administrador', { selector: 'p' }),
+    ).toBeInTheDocument();
+  });
+
+  it('no aparece en la cámara, que ya tiene su botón Cancelar en esa esquina', async () => {
+    const router = createMemoryRouter(
+      [{ path: '/prototipo/empleado/:pantalla', element: <EmployeePrototype /> }],
+      { initialEntries: ['/prototipo/empleado/selfie?tipo=entrada'] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByRole('button', { name: 'Tomar selfie' });
+    expect(screen.queryByRole('button', { name: 'Menú del prototipo' })).toBeNull();
+  });
+});

@@ -13,6 +13,7 @@ import { Link, NavLink } from 'react-router';
 
 import { Logo } from '../../../components/brand/brand-header.js';
 import { Avatar } from '../../../components/ui/avatar.js';
+import { ThemeMenu } from '../../../components/ui/theme-menu.js';
 import { cn } from '../../../lib/cn.js';
 
 export interface AdminNavCounts {
@@ -95,6 +96,7 @@ export function AdminLayout({ basePath, admin, counts, markHref, children }: Adm
             <p className="truncate text-[14px] font-semibold">{admin.name}</p>
             <p className="text-[12px] text-ink-muted">Administrador</p>
           </div>
+          <ThemeMenu />
           <button
             type="button"
             className="grid size-11 place-items-center rounded-xl text-ink-muted transition-colors hover:bg-surface hover:text-ink"
@@ -113,13 +115,16 @@ export function AdminLayout({ basePath, admin, counts, markHref, children }: Adm
             Control de Asistencia
           </p>
         </div>
-        <Link
-          to={markHref}
-          className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-[14px] font-semibold text-primary-ink"
-        >
-          <Fingerprint className="size-4" aria-hidden="true" />
-          Marcar
-        </Link>
+        <div className="flex items-center gap-1">
+          <ThemeMenu />
+          <Link
+            to={markHref}
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-[14px] font-semibold text-primary-ink"
+          >
+            <Fingerprint className="size-4" aria-hidden="true" />
+            Marcar
+          </Link>
+        </div>
       </header>
 
       <main className="px-4 pb-28 pt-6 sm:px-6 lg:ml-64 lg:px-10 lg:pb-12 lg:pt-10">
