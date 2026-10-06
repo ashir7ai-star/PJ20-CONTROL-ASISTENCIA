@@ -20,7 +20,10 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('inline-flex h-11 rounded-xl bg-surface p-1 ring-1 ring-line', className)}
+      className={cn(
+        'inline-flex h-11 overflow-hidden rounded-xl bg-surface ring-1 ring-line',
+        className,
+      )}
     >
       {options.map((option) => {
         const selected = option.value === value;
@@ -34,9 +37,9 @@ export function Segmented<T extends string>({
               onChange(option.value);
             }}
             className={cn(
-              'rounded-lg px-3.5 text-[14px] font-medium transition-colors',
+              'h-11 px-4 text-[14px] font-medium transition-colors',
               selected
-                ? 'bg-surface-raised text-ink shadow-sm ring-1 ring-line'
+                ? 'rounded-xl bg-surface-raised text-ink shadow-sm ring-1 ring-line-strong'
                 : 'text-ink-muted hover:text-ink',
             )}
           >

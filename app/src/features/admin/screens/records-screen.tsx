@@ -52,7 +52,7 @@ export function RecordsScreen({ records, employeeById, onOpen }: RecordsScreenPr
         }
       />
 
-      <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchInput
           aria-label="Buscar empleado"
           placeholder="Buscar empleado"
@@ -60,7 +60,7 @@ export function RecordsScreen({ records, employeeById, onOpen }: RecordsScreenPr
           onChange={(e) => {
             setQuery(e.target.value);
           }}
-          className="lg:w-72"
+          className="sm:w-64"
         />
         <Select
           aria-label="Período"
@@ -68,7 +68,7 @@ export function RecordsScreen({ records, employeeById, onOpen }: RecordsScreenPr
           onChange={(e) => {
             setPeriod(e.target.value as Period);
           }}
-          className="lg:w-48"
+          className="sm:w-44"
         >
           <option value="today">Hoy</option>
           <option value="yesterday">Ayer</option>
@@ -84,7 +84,7 @@ export function RecordsScreen({ records, employeeById, onOpen }: RecordsScreenPr
             { value: 'check_out', label: 'Salidas' },
           ]}
         />
-        <label className="inline-flex h-11 cursor-pointer items-center gap-2 text-[14px] font-medium lg:ml-auto">
+        <label className="inline-flex h-11 cursor-pointer items-center gap-2 whitespace-nowrap text-[14px] font-medium xl:ml-auto">
           <input
             type="checkbox"
             checked={onlyPending}
@@ -97,7 +97,7 @@ export function RecordsScreen({ records, employeeById, onOpen }: RecordsScreenPr
         </label>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-3xl bg-surface-raised ring-1 ring-line">
+      <div className="mt-4 overflow-x-auto rounded-3xl bg-surface-raised ring-1 ring-line">
         {visible.length === 0 ? (
           <EmptyState
             icon={<CalendarX2 className="size-6" />}
@@ -120,10 +120,10 @@ export function RecordsScreen({ records, employeeById, onOpen }: RecordsScreenPr
                   <th scope="col" className="px-5 py-3 font-medium">
                     Hora
                   </th>
-                  <th scope="col" className="px-5 py-3 font-medium">
+                  <th scope="col" className="hidden px-5 py-3 font-medium xl:table-cell">
                     Lugar
                   </th>
-                  <th scope="col" className="px-5 py-3 font-medium">
+                  <th scope="col" className="hidden px-5 py-3 font-medium xl:table-cell">
                     Precisión
                   </th>
                   <th scope="col" className="px-5 py-3 font-medium">
@@ -138,7 +138,7 @@ export function RecordsScreen({ records, employeeById, onOpen }: RecordsScreenPr
                 {visible.map((r) => (
                   <tr key={r.id} className="transition-colors hover:bg-surface">
                     <td className="px-5 py-3">
-                      <span className="flex items-center gap-3 font-medium">
+                      <span className="flex items-center gap-3 whitespace-nowrap font-medium">
                         <Avatar initials={initials(name(r.employeeId))} size="sm" />
                         {name(r.employeeId)}
                       </span>
@@ -146,18 +146,22 @@ export function RecordsScreen({ records, employeeById, onOpen }: RecordsScreenPr
                     <td className="px-5 py-3">
                       <KindLabel kind={r.kind} />
                     </td>
-                    <td className="px-5 py-3 tabular-nums">{formatTime(r.serverTime)}</td>
-                    <td className="px-5 py-3 text-ink-muted">{r.location.place}</td>
-                    <td className="px-5 py-3 tabular-nums text-ink-muted">
+                    <td className="whitespace-nowrap px-5 py-3 tabular-nums">
+                      {formatTime(r.serverTime)}
+                    </td>
+                    <td className="hidden px-5 py-3 text-ink-muted xl:table-cell">
+                      {r.location.place}
+                    </td>
+                    <td className="hidden whitespace-nowrap px-5 py-3 tabular-nums text-ink-muted xl:table-cell">
                       {formatAccuracy(r.location.accuracyM)}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="whitespace-nowrap px-5 py-3">
                       <ReviewBadge review={r.review} />
                     </td>
                     <td className="px-5 py-3 text-right">
                       <Button
                         variant="ghost"
-                        className="h-9 px-3"
+                        className="h-11 px-4"
                         onClick={() => {
                           onOpen(r.id);
                         }}

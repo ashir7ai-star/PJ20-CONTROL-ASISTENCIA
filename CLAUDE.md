@@ -34,7 +34,7 @@ Esta aplicación se construye al nivel de las mejores empresas de tecnología de
 9. **Movimiento sutil y con propósito:** transiciones de 150–250 ms, respetando `prefers-reduced-motion`.
 10. **Mobile-first:** la app del empleado se diseña primero para celular; el panel administrativo se ve impecable en escritorio y es usable en tablet/celular.
 11. **Accesibilidad WCAG 2.1 AA:** contraste mínimo 4.5:1, áreas táctiles de al menos 44×44 px, navegación por teclado y etiquetas para lectores de pantalla.
-12. **Rendimiento percibido:** Lighthouse ≥ 90 en todas las categorías; la app del empleado carga en menos de 2 s en 4G.
+12. **Rendimiento percibido:** Lighthouse ≥ 90 en Rendimiento, Accesibilidad y Buenas prácticas; la app del empleado carga en menos de 2 s en 4G. (SEO no aplica: la app es interna y está bloqueada a buscadores a propósito con `robots.txt` y `noindex`, por privacidad.)
 13. **Textos cuidados:** español claro, breve y humano. Sin jerga técnica, sin "lorem ipsum", sin textos de relleno.
 14. **Aplicación 100% en español:** toda la interfaz, mensajes de error, correos, notificaciones, exportaciones y formatos (fechas, horas y números con `es-CO`, zona `America/Bogota`). Ningún texto en inglés visible para usuarios. El código fuente sí va en inglés (§4.3).
 

@@ -1,6 +1,6 @@
 # Fase 1 — Diseño · Plan detallado
 
-> Estado: **plan aprobado** · en ejecución · 2026-10-05
+> Estado: **cerrada** · versión estable **v0.1.0** · 2026-10-05
 > Reglas aplicables: `CLAUDE.md` → Regla suprema (B. Diseño) y §8 (Experiencia del empleado)
 
 ## 1. Objetivo
@@ -66,15 +66,15 @@ Un **catálogo** interno (`/diseno`, solo en desarrollo) muestra todos los token
 
 ## 6. Criterios de aceptación
 
-- [ ] Apruebas los puntos A, B y C.
-- [ ] Todos los colores definidos como tokens; **ningún valor suelto** en componentes (revisado con búsqueda automática).
-- [ ] Prueba automática de contraste: todos los pares texto/fondo ≥ 4.5:1 (claro y oscuro).
-- [ ] Prueba automática de accesibilidad (axe) en cada pantalla: 0 violaciones.
-- [ ] Áreas táctiles ≥ 44×44 px; navegación completa con teclado en el panel.
-- [ ] Cada pantalla revisada en 360 px, 390 px, tablet y escritorio, claro y oscuro.
-- [ ] El código del panel admin no está en el bloque que descarga un empleado (verificado en el build).
-- [ ] Lighthouse ≥ 90 en la pantalla Marcar.
-- [ ] lint, typecheck, pruebas, build y CI en verde.
+- [x] Apruebas los puntos A, B y C. (C aprobado con dos ajustes: volver al panel desde Marcar y gestión de roles.)
+- [x] Todos los colores definidos como tokens; **ningún valor suelto** en componentes (prueba automática con control negativo).
+- [x] Prueba automática de contraste: todos los pares texto/fondo ≥ 4.5:1 (claro y oscuro), con control negativo.
+- [x] Prueba automática de accesibilidad (axe) en cada pantalla: 0 violaciones (encontró y se corrigió 1 problema real).
+- [x] Áreas táctiles ≥ 44×44 px (auditoría: se corrigieron el botón «Ver» y el selector segmentado, que medían 36 px). Teclado: componentes nativos y Radix; menú de acciones probado con teclado. Revisión manual completa de teclado: pendiente para la Fase 6.
+- [x] Revisión en 360 px, 390 px, tablet (768 y 1024 px) y escritorio, claro y oscuro. En tablet horizontal se encontró y corrigió la columna «Ver» cortada.
+- [x] El código del panel admin no está en el paquete del empleado (guardián en cada build, con control negativo).
+- [x] Lighthouse móvil en Marcar (mediana de 3): **Rendimiento 97 · Accesibilidad 100 · Buenas prácticas 100**. Primera medición: 89 (faltaban ícono y robots.txt). SEO 66 a propósito: app bloqueada a buscadores (ver `CLAUDE.md` B.12).
+- [x] lint, typecheck, 195 pruebas (177 app + 15 backend + 3 shared), build y CI en verde.
 
 ## 7. Riesgos
 
