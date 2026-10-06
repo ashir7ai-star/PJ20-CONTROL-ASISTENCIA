@@ -11,37 +11,41 @@ import { PrototypeIndex } from '../prototype/prototype-index.js';
  * The admin panel and developer pages are lazy-loaded so they never weigh on
  * (or leak into) the employee bundle; AppLoading covers the download.
  */
-export const router = createBrowserRouter([
-  {
-    HydrateFallback: AppLoading,
-    children: [
-      { path: '/', element: <Navigate to="/prototipo" replace /> },
-      { path: '/prototipo', element: <PrototypeIndex /> },
-      { path: '/prototipo/empleado/:pantalla', element: <EmployeePrototype /> },
-      { path: '/prototipo/empleado/:pantalla/:problema', element: <EmployeePrototype /> },
-      {
-        // Separate bundle: the admin panel never ships to employee devices.
-        path: '/prototipo/admin/*',
-        lazy: async () => {
-          const { AdminPrototype } = await import('../prototype/admin-prototype.js');
-          return { Component: AdminPrototype };
+export const router = createBrowserRouter(
+  [
+    {
+      HydrateFallback: AppLoading,
+      children: [
+        { path: '/', element: <Navigate to="/prototipo" replace /> },
+        { path: '/prototipo', element: <PrototypeIndex /> },
+        { path: '/prototipo/empleado/:pantalla', element: <EmployeePrototype /> },
+        { path: '/prototipo/empleado/:pantalla/:problema', element: <EmployeePrototype /> },
+        {
+          // Separate bundle: the admin panel never ships to employee devices.
+          path: '/prototipo/admin/*',
+          lazy: async () => {
+            const { AdminPrototype } = await import('../prototype/admin-prototype.js');
+            return { Component: AdminPrototype };
+          },
         },
-      },
-      {
-        path: '/diseno',
-        lazy: async () => {
-          const { DesignCatalog } = await import('../pages/design-catalog.js');
-          return { Component: DesignCatalog };
+        {
+          path: '/diseno',
+          lazy: async () => {
+            const { DesignCatalog } = await import('../pages/design-catalog.js');
+            return { Component: DesignCatalog };
+          },
         },
-      },
-      {
-        path: '/estado',
-        lazy: async () => {
-          const { SystemStatusPage } = await import('../pages/system-status.js');
-          return { Component: SystemStatusPage };
+        {
+          path: '/estado',
+          lazy: async () => {
+            const { SystemStatusPage } = await import('../pages/system-status.js');
+            return { Component: SystemStatusPage };
+          },
         },
-      },
-      { path: '*', element: <NotFoundPage /> },
-    ],
-  },
-]);
+        { path: '*', element: <NotFoundPage /> },
+      ],
+    },
+  ],
+  // Same build works at the domain root (Easypanel) or under a sub-path (GitHub Pages).
+  { basename: import.meta.env.BASE_URL.replace(/\/$/, '') || '/' },
+);

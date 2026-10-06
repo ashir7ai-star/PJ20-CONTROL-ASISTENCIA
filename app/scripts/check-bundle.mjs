@@ -3,7 +3,8 @@
 import { readFile } from 'node:fs/promises';
 
 const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
-const entries = [...html.matchAll(/<script[^>]+src="\/([^"]+\.js)"/g)].map((m) => m[1]);
+// Entry scripts live in assets/, whatever the base path ("/" or a GitHub Pages sub-path).
+const entries = [...html.matchAll(/<script[^>]+src="[^"]*?(assets\/[^"]+\.js)"/g)].map((m) => m[1]);
 if (entries.length === 0) throw new Error('No entry script found in dist/index.html');
 
 // Strings that only exist in admin screens.
