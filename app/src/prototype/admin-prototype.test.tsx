@@ -163,3 +163,69 @@ describe('navegación', () => {
     expect(await screen.findByText('Pantalla del empleado')).toBeInTheDocument();
   });
 });
+
+describe('Empleados · gestión de roles y accesos', () => {
+  async function openActions(name: string) {
+    renderAdmin('/prototipo/admin/empleados');
+    const trigger = await screen.findByRole('button', { name: `Acciones para ${name}` });
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    return screen.findByRole('menu');
+  }
+
+  it('hace administrador a un empleado tras confirmar', async () => {
+    const menu = await openActions('Laura Gómez');
+    expect(
+      within(menu).getByRole('menuitem', { name: 'Quitar rol de administrador' }),
+    ).toBeInTheDocument();
+    // Laura (e01) is admin in the prototype data; promote someone else instead.
+    fireEvent.keyDown(menu, { key: 'Escape' });
+
+    const trigger = screen.getByRole('button', { name: 'Acciones para Camila Hernández' });
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Hacer administrador' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Hacer administrador' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Hacer administrador' }));
+
+    const row = screen.getByText('Camila Hernández').closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getAllByText('Administrador').length).toBeGreaterThan(0);
+  });
+
+  it('impide quitarse el propio rol y lo explica', async () => {
+    const menu = await openActions('Andrés Rodríguez');
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Quitar rol de administrador' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Acción no permitida' });
+    expect(dialog).toHaveTextContent('No puedes quitarte tu propio rol de administrador.');
+    expect(within(dialog).getByRole('button', { name: 'Entendido' })).toBeInTheDocument();
+  });
+
+  it('no elimina a quien tiene marcaciones: sugiere desactivarlo', async () => {
+    const menu = await openActions('Santiago López');
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Eliminar' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Acción no permitida' });
+    expect(dialog).toHaveTextContent(/desactiva su acceso en lugar de eliminarlo/);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Entendido' }));
+    expect(screen.getByText('Santiago López')).toBeInTheDocument();
+  });
+
+  it('desactiva el acceso y actualiza el contador', async () => {
+    const menu = await openActions('Santiago López');
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Desactivar acceso' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Desactivar acceso' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Desactivar' }));
+    expect(screen.getByText('28 activos · 2 inactivos')).toBeInTheDocument();
+  });
+
+  it('elimina a un usuario sin marcaciones', async () => {
+    const menu = await openActions('Ricardo Patiño');
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Eliminar' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Eliminar usuario' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Eliminar' }));
+    expect(screen.queryByText('Ricardo Patiño')).toBeNull();
+  });
+
+  it('el menú de acciones y el diálogo son accesibles', async () => {
+    await openActions('Camila Hernández');
+    expect(await a11yViolations(document.body)).toEqual([]);
+  });
+});

@@ -133,3 +133,13 @@ Un **catálogo** interno (`/diseno`, solo en desarrollo) muestra todos los token
 
 - Detectado al revisar el prototipo: un administrador que marcaba su asistencia no tenía forma de volver al panel.
 - Botón «Ir al panel de administración» al pie de la pantalla Marcar, **solo para administradores** (los empleados nunca lo ven; probado). Se ubicó abajo y no junto al logo porque en celulares de 360 px se encimaría con él.
+
+### Ajuste (2026-10-05): gestión de roles y accesos
+
+- Solicitado por el dueño del proyecto: cambiar el rol de cada usuario (hacer o quitar administrador) y quitar usuarios.
+- Menú «Acciones» por usuario: hacer administrador / quitar rol, desactivar / reactivar acceso, eliminar. Cada acción se confirma; si no está permitida, se explica el motivo.
+- Reglas de seguridad (`app/src/features/admin/permissions.ts`, con pruebas; el backend aplicará las mismas):
+  - Nadie puede quitarse su propio rol, desactivarse ni eliminarse.
+  - Siempre debe quedar al menos un administrador activo.
+  - **Eliminar** solo usuarios sin marcaciones. Con marcaciones se **desactivan**: pierden el acceso y su historial se conserva (Ley 1581 + auditoría + marcaciones inmutables, `CLAUDE.md` §2.4).
+- Script `pnpm dev:movil` para probar el prototipo en celulares de la misma red wifi.

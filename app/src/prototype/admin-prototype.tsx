@@ -9,6 +9,7 @@ import { Route, Routes, useSearchParams } from 'react-router';
 import { AdminLayout } from '../features/admin/components/admin-layout.js';
 import type { AttendanceRecord, Employee, Role } from '../features/admin/model.js';
 import { initials } from '../features/admin/model.js';
+import type { UserAction } from '../features/admin/permissions.js';
 import { DevicesScreen } from '../features/admin/screens/devices-screen.js';
 import { EmployeesScreen } from '../features/admin/screens/employees-screen.js';
 import { OverviewScreen } from '../features/admin/screens/overview-screen.js';
@@ -24,6 +25,7 @@ import {
 } from './admin-data.js';
 
 const BASE = '/prototipo/admin';
+const ME_ID = 'e02';
 
 export function AdminPrototype() {
   const [records, setRecords] = useState<AttendanceRecord[]>(initialRecords);
@@ -35,7 +37,35 @@ export function AdminPrototype() {
   const pending = records.filter((r) => r.review === 'pending');
   const detailId = params.get('detalle');
   const detail = records.find((r) => r.id === detailId) ?? null;
-  const admin = employees[1] ?? initialEmployees[0];
+  // The signed-in administrator (prototype: Andrés Rodríguez). Cannot delete or
+  // demote themselves, so this always resolves.
+  const me = employeeById.get(ME_ID);
+  if (!me) throw new Error('El administrador del prototipo no existe');
+
+  const recordCountById = new Map<string, number>();
+  for (const r of records) {
+    recordCountById.set(r.employeeId, (recordCountById.get(r.employeeId) ?? 0) + 1);
+  }
+
+  const applyAction = (id: string, action: UserAction) => {
+    setEmployees((current) =>
+      action === 'delete'
+        ? current.filter((e) => e.id !== id)
+        : current.map((e) => {
+            if (e.id !== id) return e;
+            switch (action) {
+              case 'make-admin':
+                return { ...e, role: 'admin' };
+              case 'remove-admin':
+                return { ...e, role: 'employee' };
+              case 'deactivate':
+                return { ...e, active: false };
+              case 'reactivate':
+                return { ...e, active: true };
+            }
+          }),
+    );
+  };
 
   const decide = (id: string, decision: 'approved' | 'rejected') => {
     setRecords((current) => current.map((r) => (r.id === id ? { ...r, review: decision } : r)));
@@ -47,7 +77,7 @@ export function AdminPrototype() {
   return (
     <AdminLayout
       basePath={BASE}
-      admin={{ name: admin?.name ?? 'Administrador', initials: initials(admin?.name ?? 'A') }}
+      admin={{ name: me.name, initials: initials(me.name) }}
       counts={{ review: pending.length, devices: requests.length }}
       markHref="/prototipo/empleado/marcar?rol=admin"
     >
@@ -92,9 +122,12 @@ export function AdminPrototype() {
           element={
             <EmployeesScreen
               employees={employees}
+              me={me}
+              recordCountById={recordCountById}
+              onAction={applyAction}
               onAdd={(e: { name: string; email: string; role: Role }) => {
                 setEmployees((current) => [
-                  { id: `n${String(current.length + 1)}`, ...e, active: true, device: null },
+                  { id: crypto.randomUUID(), ...e, active: true, device: null },
                   ...current,
                 ]);
               }}
