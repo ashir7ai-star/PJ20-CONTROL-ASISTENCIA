@@ -23,6 +23,7 @@ import {
   employees as initialEmployees,
   records as initialRecords,
 } from './admin-data.js';
+import { PrototypeMenu } from './prototype-menu.js';
 
 const BASE = '/prototipo/admin';
 const ME_ID = 'e02';
@@ -160,6 +161,7 @@ export function AdminPrototype() {
           setParams({});
         }}
       />
+      <PrototypeMenu placement="bottom-right" />
     </AdminLayout>
   );
 }

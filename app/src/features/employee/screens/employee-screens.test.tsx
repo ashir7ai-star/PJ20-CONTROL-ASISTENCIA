@@ -148,3 +148,20 @@ describe('Marcar · acceso al panel', () => {
     expect(onOpenAdmin).toHaveBeenCalledOnce();
   });
 });
+
+describe('Botón Pulso', () => {
+  it('late (anillos animados) cuando está listo para marcar', () => {
+    render(<ClockScreen view={offDuty} now={MORNING} />);
+    expect(screen.getByTestId('pulse-ring')).toBeInTheDocument();
+  });
+
+  it('no anima mientras busca la ubicación (botón deshabilitado)', () => {
+    render(<ClockScreen view={searchingGps} now={MORNING} />);
+    expect(screen.queryByTestId('pulse-ring')).toBeNull();
+  });
+
+  it('la pantalla Marcar ofrece el control de apariencia', () => {
+    render(<ClockScreen view={offDuty} now={MORNING} />);
+    expect(screen.getByRole('button', { name: 'Apariencia' })).toBeInTheDocument();
+  });
+});

@@ -20,8 +20,7 @@ function extractVars(block: string): Record<string, string> {
 }
 
 const lightBlock = /@theme\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-const darkBlock =
-  /prefers-color-scheme:\s*dark\)\s*\{\s*:root\s*\{([\s\S]*?)\n {2}\}/.exec(css)?.[1] ?? '';
+const darkBlock = /:root\[data-theme='dark'\]\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
 const light = extractVars(lightBlock);
 const dark = { ...light, ...extractVars(darkBlock) };
 

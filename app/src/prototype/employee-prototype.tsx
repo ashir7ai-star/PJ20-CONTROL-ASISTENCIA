@@ -12,6 +12,7 @@ import {
   problemKinds,
 } from '../features/employee/screens/problem-screen.js';
 import { SelfieScreen } from '../features/employee/screens/selfie-screen.js';
+import { PrototypeMenu } from './prototype-menu.js';
 import { AFTERNOON, MORNING, offDuty, onDuty, searchingGps, weakGps } from './scenarios.js';
 
 const base = '/prototipo/empleado';
@@ -27,6 +28,17 @@ const paramFromKind = (kind: AttendanceKind) => (kind === 'check_out' ? 'salida'
  * → selfie → confirmación → marcar.
  */
 export function EmployeePrototype() {
+  const { pantalla = '' } = useParams();
+  return (
+    <>
+      <EmployeeScreen />
+      {/* The camera screen has its own top-left control (Cancelar). */}
+      {pantalla !== 'selfie' && <PrototypeMenu placement="top-left" />}
+    </>
+  );
+}
+
+function EmployeeScreen() {
   const { pantalla = '', problema = '' } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
