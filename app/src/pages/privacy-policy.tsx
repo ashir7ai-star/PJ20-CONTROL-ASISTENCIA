@@ -33,12 +33,18 @@ export function PrivacyPolicyPage() {
         <Section title="1. Responsable del tratamiento">
           <ul>
             <li>Razón social: BLAZAR ENERGY</li>
-            <li>NIT: 901.724.892</li>
+            <li>NIT: 901.724.892-9</li>
             <li>
-              Domicilio: <Pending>dirección</Pending>
+              Domicilio: Av. 6 Norte # 49-06 · <Pending>ciudad</Pending>
             </li>
             <li>
-              Correo para asuntos de datos personales: <Pending>correo de contacto</Pending>
+              Correo para asuntos de datos personales:{' '}
+              <a
+                href="mailto:nathan@ylevigroup.com"
+                className="font-medium text-link underline underline-offset-2"
+              >
+                nathan@ylevigroup.com
+              </a>
             </li>
           </ul>
         </Section>

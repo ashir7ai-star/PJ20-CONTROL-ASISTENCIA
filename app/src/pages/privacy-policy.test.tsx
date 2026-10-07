@@ -27,7 +27,11 @@ describe('Política de Tratamiento de Datos', () => {
     render(<PrivacyPolicyPage />);
     expect(screen.getByText(/Borrador pendiente de revisión legal/)).toBeInTheDocument();
     expect(screen.getAllByText(/Por completar:/).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText(/NIT: 901.724.892/)).toBeInTheDocument();
+    expect(screen.getByText(/NIT: 901.724.892-9/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'nathan@ylevigroup.com' })).toHaveAttribute(
+      'href',
+      'mailto:nathan@ylevigroup.com',
+    );
   });
 
   it('es accesible', async () => {
