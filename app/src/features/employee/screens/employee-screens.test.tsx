@@ -193,3 +193,12 @@ describe('Contador de tiempo trabajado', () => {
     expect(screen.queryByText('Tiempo trabajado')).toBeNull();
   });
 });
+
+describe('Política de privacidad', () => {
+  it('el consentimiento enlaza a la política completa en una pestaña nueva', () => {
+    render(<ConsentScreen />);
+    const link = screen.getByRole('link', { name: 'Leer la política completa' });
+    expect(link).toHaveAttribute('href', '/privacidad');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+});
