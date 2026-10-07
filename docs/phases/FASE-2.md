@@ -120,10 +120,10 @@ La regla actual dice "access token de 15 min + refresh token". Propongo **sesion
 
 **Lighthouse móvil** (3 corridas, con la API real):
 
-| Pantalla                       | Rendimiento | Accesibilidad | Buenas prácticas |
-| ------------------------------ | ----------- | ------------- | ---------------- |
-| Marcar (uso diario)            | 89–90       | 100           | 100              |
-| Inicio de sesión (`/`)         | 84–87       | 100           | 96               |
+| Pantalla               | Rendimiento | Accesibilidad | Buenas prácticas |
+| ---------------------- | ----------- | ------------- | ---------------- |
+| Marcar (uso diario)    | 89–90       | 100           | 100              |
+| Inicio de sesión (`/`) | 84–87       | 100           | 96               |
 
 **Excepción a B.12 propuesta para aprobar:** la pantalla de inicio de sesión queda por debajo de 90 en rendimiento por el script oficial de Google. D1 lo exige y su ejecución es la tarea más larga de la página (≈260 ms). Sin ese script, la pantalla marca 85–87. La puntuación de buenas prácticas (96) baja por el `401` normal de `/me` cuando nadie ha iniciado sesión. Esta pantalla se ve una vez cada 30 días por empleado; Marcar, que es la de todos los días, cumple.
 
