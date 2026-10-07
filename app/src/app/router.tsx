@@ -42,6 +42,14 @@ export const router = createBrowserRouter(
             return { Component: SystemStatusPage };
           },
         },
+        {
+          // Public: linked from the consent screen and Google's sign-in consent screen.
+          path: '/privacidad',
+          lazy: async () => {
+            const { PrivacyPolicyPage } = await import('../pages/privacy-policy.js');
+            return { Component: PrivacyPolicyPage };
+          },
+        },
         { path: '*', element: <NotFoundPage /> },
       ],
     },

@@ -45,7 +45,12 @@ export function ConsentScreen({ onAccept }: ConsentScreenProps) {
       <p className="mt-5 text-[14px] leading-relaxed text-ink-muted">
         Puedes consultar, actualizar o pedir la eliminación de tus datos cuando quieras (Ley 1581 de
         2012).{' '}
-        <a href="#politica" className="font-medium text-link underline underline-offset-2">
+        <a
+          href={`${import.meta.env.BASE_URL}privacidad`}
+          target="_blank"
+          rel="noopener"
+          className="font-medium text-link underline underline-offset-2"
+        >
           Leer la política completa
         </a>
       </p>
