@@ -17,7 +17,10 @@
     "format:check": "prettier --check .",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "test:integration": "pnpm --filter @pj20/backend test:integration",
-    "dev:movil": "pnpm --filter @pj20/app dev --host"
+    "dev:movil": "pnpm --filter @pj20/app dev --host",
+    "db:migrate": "pnpm --filter @pj20/backend db:migrate",
+    "db:usuario-app": "pnpm --filter @pj20/backend db:usuario-app",
+    "admin:crear": "pnpm --filter @pj20/backend admin:crear"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

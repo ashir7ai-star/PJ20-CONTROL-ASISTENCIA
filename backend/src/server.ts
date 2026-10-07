@@ -1,5 +1,8 @@
 import { InvalidEnvError, loadEnv } from './config/env.js';
 import { buildApp } from './app.js';
+import { createGoogleVerifier } from './auth/google.js';
+import { createNonceStore } from './auth/nonce.js';
+import { createDatabase } from './db/client.js';
 import { checkDatabase, createDatabasePool } from './infra/postgres.js';
 import { checkCache, createRedisClient } from './infra/redis.js';
 import { checkStorage, createStorageClient, ensureBucket } from './infra/storage.js';
@@ -20,6 +23,8 @@ async function main(): Promise<void> {
 
   const app = await buildApp({
     appOrigins: env.APP_ORIGINS,
+    trustProxy: env.TRUST_PROXY,
+    exposeDocs: env.NODE_ENV !== 'production',
     logger: {
       level: env.LOG_LEVEL,
       redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
@@ -28,6 +33,12 @@ async function main(): Promise<void> {
       database: () => checkDatabase(db),
       cache: () => checkCache(redis),
       storage: () => checkStorage(storage, env.S3_BUCKET),
+    },
+    api: {
+      db: createDatabase(db),
+      redis,
+      verifier: createGoogleVerifier(env.GOOGLE_CLIENT_ID),
+      nonces: createNonceStore(redis),
     },
   });
 

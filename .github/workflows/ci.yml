@@ -31,7 +31,7 @@ jobs:
       - run: pnpm build
 
   integration:
-    name: Integración (Postgres, Redis, S3 reales)
+    name: Integración (Postgres, Redis, S3 reales · API de punta a punta)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Throwaway credentials, valid only inside this ephemeral runner.
@@ -44,7 +44,9 @@ jobs:
       S3_SECRET_KEY: ci-secret-key
       S3_BUCKET: pj20-selfies
       APP_ORIGINS: http://localhost:5173
-      DATABASE_URL: postgres://pj20:ci-postgres@localhost:15432/pj20
+      DATABASE_MIGRATION_URL: postgres://pj20:ci-postgres@localhost:15432/pj20
+      DATABASE_URL: postgres://pj20_api:ci-api-user-password@localhost:15432/pj20
+      GOOGLE_CLIENT_ID: ci.apps.googleusercontent.com
       REDIS_URL: redis://:ci-redis@localhost:16379
       S3_ENDPOINT: http://localhost:19000
     steps:
@@ -55,6 +57,8 @@ jobs:
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: docker compose up -d --wait
+      - name: Migraciones y usuario restringido de la API (igual que en producción)
+        run: pnpm db:migrate && pnpm db:usuario-app
       - run: pnpm test:integration
       - if: failure()
         run: docker compose logs

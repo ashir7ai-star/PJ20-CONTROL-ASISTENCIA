@@ -1,12 +1,25 @@
-import { ShieldCheck } from 'lucide-react';
+import { LoaderCircle, ShieldCheck } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Logo } from '../../../components/brand/brand-header.js';
 
 interface LoginScreenProps {
+  /** Prototype only: mock button handler. */
   onGoogle?: () => void;
+  /** Real app: the official Google Sign-In button. */
+  googleButton?: ReactNode;
+  /** True while the server verifies the credential. */
+  verifying?: boolean;
+  /** Spanish error message to show above the button. */
+  error?: string | null;
 }
 
-export function LoginScreen({ onGoogle }: LoginScreenProps) {
+export function LoginScreen({
+  onGoogle,
+  googleButton,
+  verifying = false,
+  error,
+}: LoginScreenProps) {
   return (
     <div className="bg-pulse safe-area min-h-dvh text-ink">
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10">
@@ -21,7 +34,25 @@ export function LoginScreen({ onGoogle }: LoginScreenProps) {
         </section>
 
         <div className="flex flex-col gap-4">
-          <GoogleButton {...(onGoogle ? { onClick: onGoogle } : {})} />
+          {error && (
+            <p
+              role="alert"
+              className="rounded-2xl bg-danger-soft px-4 py-3 text-center text-[14px] font-medium text-danger"
+            >
+              {error}
+            </p>
+          )}
+          {verifying ? (
+            <p
+              role="status"
+              className="flex h-14 items-center justify-center gap-2 text-[15px] font-medium text-ink-muted"
+            >
+              <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
+              Verificando tu cuenta…
+            </p>
+          ) : (
+            (googleButton ?? <GoogleButton {...(onGoogle ? { onClick: onGoogle } : {})} />)
+          )}
           <p className="text-center text-[13px] leading-relaxed text-ink-muted">
             <ShieldCheck className="mr-1.5 inline size-4 -translate-y-px" aria-hidden="true" />
             Solo pueden ingresar los correos autorizados por BLAZAR ENERGY.

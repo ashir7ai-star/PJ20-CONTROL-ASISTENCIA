@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Employee } from './model.js';
+import type { ManagedUser } from './permissions.js';
 import { availableActions, blockReason } from './permissions.js';
 
-const user = (id: string, role: Employee['role'], active = true): Employee => ({
+const user = (id: string, role: ManagedUser['role'], active = true): ManagedUser => ({
   id,
-  name: `Usuario ${id}`,
-  email: `${id}@gmail.com`,
   role,
   active,
-  device: null,
 });
 
 const me = user('me', 'admin');

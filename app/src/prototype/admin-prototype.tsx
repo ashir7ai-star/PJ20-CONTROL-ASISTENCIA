@@ -9,7 +9,7 @@ import { Route, Routes, useSearchParams } from 'react-router';
 import { AdminLayout } from '../features/admin/components/admin-layout.js';
 import type { AttendanceRecord, Employee, Role } from '../features/admin/model.js';
 import { initials } from '../features/admin/model.js';
-import type { UserAction } from '../features/admin/permissions.js';
+import type { UserAction } from '@pj20/shared';
 import { DevicesScreen } from '../features/admin/screens/devices-screen.js';
 import { EmployeesScreen } from '../features/admin/screens/employees-screen.js';
 import { OverviewScreen } from '../features/admin/screens/overview-screen.js';

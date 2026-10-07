@@ -1,25 +1,44 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 
 import { AppLoading } from '../components/brand/app-loading.js';
+import { RealApp } from './real-app.js';
 import { NotFoundPage } from '../pages/not-found.js';
-import { EmployeePrototype } from '../prototype/employee-prototype.js';
-import { PrototypeIndex } from '../prototype/prototype-index.js';
 
 /**
- * Fase 1 routes: the prototype is the entry point. Real routes (login guard,
- * employee/admin split) arrive with authentication in Fase 2–3.
- * The admin panel and developer pages are lazy-loaded so they never weigh on
- * (or leak into) the employee bundle; AppLoading covers the download.
+ * "/" is the real app (session → consent → Marcar). The prototype, the admin
+ * panel and developer pages are lazy-loaded so they never weigh on (or leak
+ * into) the bundle every employee downloads; AppLoading covers the download.
  */
 export const router = createBrowserRouter(
   [
     {
       HydrateFallback: AppLoading,
       children: [
-        { path: '/', element: <Navigate to="/prototipo" replace /> },
-        { path: '/prototipo', element: <PrototypeIndex /> },
-        { path: '/prototipo/empleado/:pantalla', element: <EmployeePrototype /> },
-        { path: '/prototipo/empleado/:pantalla/:problema', element: <EmployeePrototype /> },
+        {
+          path: '/',
+          // Static demo (GitHub Pages) has no API: it opens the prototype index.
+          element:
+            import.meta.env.VITE_MODO === 'prototipo' ? (
+              <Navigate to="/prototipo" replace />
+            ) : (
+              <RealApp />
+            ),
+        },
+        // Prototype (Fase 1 review tool): its own bundle, never loaded by the real app.
+        {
+          path: '/prototipo',
+          lazy: async () => {
+            const { PrototypeIndex } = await import('../prototype/prototype-index.js');
+            return { Component: PrototypeIndex };
+          },
+        },
+        {
+          path: '/prototipo/empleado/:pantalla/:problema?',
+          lazy: async () => {
+            const { EmployeePrototype } = await import('../prototype/employee-prototype.js');
+            return { Component: EmployeePrototype };
+          },
+        },
         {
           // Separate bundle: the admin panel never ships to employee devices.
           path: '/prototipo/admin/*',

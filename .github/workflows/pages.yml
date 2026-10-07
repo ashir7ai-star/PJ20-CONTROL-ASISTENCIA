@@ -32,6 +32,8 @@ jobs:
         run: pnpm --filter @pj20/app build
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
+          # Static demo: no API on GitHub Pages, "/" opens the prototype index.
+          VITE_MODO: prototipo
       # GitHub Pages has no SPA rewrites: serve the app for any unknown path,
       # so reloading /prototipo/admin (or sharing that link) works.
       - run: cp app/dist/index.html app/dist/404.html

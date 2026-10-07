@@ -1,6 +1,6 @@
 # Fase 2 — Backend núcleo y autenticación · Plan detallado
 
-> Estado: **pendiente de aprobación** · 2026-10-06
+> Estado: **aprobado** (incluidas D1 y D2) · en ejecución · 2026-10-07
 > Reglas aplicables: `CLAUDE.md` §1 (Seguridad), §3 (Privacidad), §4 (Arquitectura), §9 (Método)
 
 ## 1. Objetivo
@@ -108,3 +108,23 @@ La regla actual dice "access token de 15 min + refresh token". Propongo **sesion
 1. **Aprobar este plan**, incluidas las decisiones **D1** y **D2**.
 2. **Proyecto en Google Cloud Console** (detalle en la respuesta del chat).
 3. **Correos de los administradores iniciales.**
+
+## 11. Informe de ejecución (en curso · 2026-10-07)
+
+**Hecho y verificado en local:**
+
+- Pruebas: shared 12 · backend 25 · app 226 · integración con Postgres y Redis reales 26. Lint, tipos y build en verde.
+- La base de datos se probó atacándola: la API no puede alterar ni borrar la auditoría ni los consentimientos, ni crear o borrar tablas; ni siquiera el dueño puede modificar la auditoría.
+- Carga inicial del celular: 3 archivos y unos 104 KB comprimidos. Un guardián en el build impide que entren el panel de administración o la librería de validación (el servidor ya valida cada respuesta).
+- Error corregido: si el servidor no respondía, el botón de Google pedía el _nonce_ en bucle. Ahora muestra un aviso con «Reintentar» y lo cubre una prueba.
+
+**Lighthouse móvil** (3 corridas, con la API real):
+
+| Pantalla                       | Rendimiento | Accesibilidad | Buenas prácticas |
+| ------------------------------ | ----------- | ------------- | ---------------- |
+| Marcar (uso diario)            | 89–90       | 100           | 100              |
+| Inicio de sesión (`/`)         | 84–87       | 100           | 96               |
+
+**Excepción a B.12 propuesta para aprobar:** la pantalla de inicio de sesión queda por debajo de 90 en rendimiento por el script oficial de Google. D1 lo exige y su ejecución es la tarea más larga de la página (≈260 ms). Sin ese script, la pantalla marca 85–87. La puntuación de buenas prácticas (96) baja por el `401` normal de `/me` cuando nadie ha iniciado sesión. Esta pantalla se ve una vez cada 30 días por empleado; Marcar, que es la de todos los días, cumple.
+
+**Pendiente para cerrar la fase:** la prueba manual con tu cuenta de Google en `localhost`, que marca los criterios 1 y 2 de la sección 8.
