@@ -33,8 +33,6 @@ type State =
   | { kind: 'offline' }
   | { kind: 'signed-in'; me: Me };
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
-
 /** Until Fase 3 the shift itself is example data; the person is real. */
 function viewFor(me: Me): EmployeeView {
   return {
@@ -59,6 +57,7 @@ async function readSession(): Promise<State> {
 
 export function RealApp() {
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
   const navigate = useNavigate();
 
   // Incrementing this re-reads the session (on start, after consent, on retry).
@@ -126,8 +125,8 @@ export function RealApp() {
           verifying={state.kind === 'verifying'}
           error={state.kind === 'signed-out' ? state.error : null}
           googleButton={
-            CLIENT_ID ? (
-              <GoogleButton clientId={CLIENT_ID} onCredential={(c, n) => void onCredential(c, n)} />
+            clientId ? (
+              <GoogleButton clientId={clientId} onCredential={(c, n) => void onCredential(c, n)} />
             ) : (
               <p role="alert" className="text-center text-[14px] text-danger">
                 Falta configurar VITE_GOOGLE_CLIENT_ID.
