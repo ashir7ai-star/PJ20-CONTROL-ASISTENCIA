@@ -13,6 +13,10 @@ RUN pnpm install --frozen-lockfile --filter @pj20/app...
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY app app
+# Public OAuth client id, baked into the bundle at build time (it is not a secret).
+# Easypanel passes service environment variables as build arguments.
+ARG VITE_GOOGLE_CLIENT_ID
+RUN test -n "$VITE_GOOGLE_CLIENT_ID" || { echo "Falta VITE_GOOGLE_CLIENT_ID (argumento de compilación)" >&2; exit 1; }
 RUN pnpm --filter @pj20/app build
 
 # Static files served by an unprivileged nginx (listens on 8080, runs as non-root).
