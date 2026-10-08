@@ -23,10 +23,13 @@ import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
 import {
+  NONCE_COOKIE,
   SESSION_COOKIE,
+  clearNonceCookie,
   clearSessionCookie,
   requireAdmin,
   requireSession,
+  setNonceCookie,
   setSessionCookie,
 } from '../auth/plugin.js';
 import { acceptConsent, type AuthDeps, currentUser, signInWithGoogle } from '../auth/service.js';
@@ -34,6 +37,7 @@ import { hashToken, revokeSession } from '../auth/sessions.js';
 import { attendanceStatus, listDay, markAttendance, readSelfie } from '../attendance/service.js';
 import { businessToday } from '../attendance/rules.js';
 import { auditLog } from '../db/schema.js';
+import { DomainError } from '../errors.js';
 import type { PhotoStore } from '../infra/photo-store.js';
 import {
   createEmployee,
@@ -43,6 +47,16 @@ import {
 } from '../employees/service.js';
 
 const idParams = z.object({ id: z.uuid() });
+
+/** Google posts back here in redirect mode (D5); must be listed in Google Cloud. */
+const GOOGLE_ORIGINS = ['https://accounts.google.com', 'null'] as const;
+
+/** Where the browser lands after Google's redirect; the app reads `acceso`. */
+const AFTER_LOGIN = {
+  ok: '/',
+  notAuthorized: '/?acceso=no-autorizada',
+  failed: '/?acceso=error',
+} as const;
 
 export interface V1Options extends AuthDeps {
   photos: PhotoStore;
@@ -67,12 +81,67 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
   });
 
   // ── Auth ────────────────────────────────────────────────────────────────
+  // Google's redirect is a classic HTML form post (application/x-www-form-urlencoded).
+  app.addContentTypeParser(
+    'application/x-www-form-urlencoded',
+    { parseAs: 'string', bodyLimit: 16_384 },
+    (_request, body, done) => {
+      done(null, Object.fromEntries(new URLSearchParams(String(body))));
+    },
+  );
+
   app.post(
     '/auth/nonce',
     { config: AUTH_RATE_LIMIT, schema: { tags: ['auth'], response: { 200: nonceResponseSchema } } },
-    async () => ({ nonce: await deps.nonces.issue() }),
+    async (_request, reply) => {
+      const nonce = await deps.nonces.issue();
+      setNonceCookie(reply, nonce);
+      return { nonce };
+    },
   );
 
+  /**
+   * Sign-in in redirect mode (D5): works on iPhone, where Google's popup
+   * cannot report back. Same verification as /auth/google, plus the nonce must
+   * be the one bound to THIS browser by its cookie. Always answers with a
+   * redirect, never JSON: this is a full-page navigation.
+   */
+  app.post(
+    '/auth/google/redirect',
+    {
+      config: { ...AUTH_RATE_LIMIT, crossSiteOrigins: GOOGLE_ORIGINS },
+      schema: {
+        tags: ['auth'],
+        hide: true,
+        body: z.looseObject({ credential: z.string().max(4096).optional() }),
+      },
+    },
+    async (request, reply) => {
+      const nonce = request.cookies[NONCE_COOKIE];
+      clearNonceCookie(reply);
+      const { credential } = request.body;
+      if (!nonce || !credential) return reply.redirect(AFTER_LOGIN.failed, 303);
+      try {
+        const { token, expiresAt } = await signInWithGoogle(deps, credential, nonce, meta(request));
+        setSessionCookie(reply, token, expiresAt);
+        return await reply.redirect(AFTER_LOGIN.ok, 303);
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return reply.redirect(
+            error.code === 'ACCOUNT_NOT_AUTHORIZED'
+              ? AFTER_LOGIN.notAuthorized
+              : AFTER_LOGIN.failed,
+            303,
+          );
+        }
+        throw error;
+      }
+    },
+  );
+
+  // JSON sign-in with an ID token obtained by the client itself. The web app
+  // uses the redirect route below (D5); this one is for the Android APK
+  // (Fase 5, native Google sign-in) and the integration tests.
   app.post(
     '/auth/google',
     {
