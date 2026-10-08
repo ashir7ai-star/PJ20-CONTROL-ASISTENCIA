@@ -70,9 +70,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: docker build -f backend/Dockerfile -t pj20-backend:ci .
-      - run: docker build -f app/Dockerfile --build-arg VITE_GOOGLE_CLIENT_ID=ci-imagen.apps.googleusercontent.com -t pj20-app:ci .
+      - run: docker build -f app/Dockerfile --build-arg VITE_GOOGLE_CLIENT_ID=ci-imagen.apps.googleusercontent.com --build-arg VITE_PUBLIC_URL=https://ci.example.com -t pj20-app:ci .
       - name: El Client ID de Google queda incluido en la app
         run: docker run --rm --entrypoint sh pj20-app:ci -c 'grep -rlq ci-imagen.apps.googleusercontent.com /usr/share/nginx/html/assets'
+      - name: La vista previa del enlace (logo al compartir) queda configurada
+        run: docker run --rm --entrypoint sh pj20-app:ci -c 'grep -q "og:image\" content=\"https://ci.example.com/og-image.jpg\"" /usr/share/nginx/html/index.html && test -s /usr/share/nginx/html/og-image.jpg'
       - name: Sin Client ID la imagen de la app no compila
         run: '! docker build -f app/Dockerfile -t pj20-app:sin-id .'
       - name: Las imágenes no corren como root
