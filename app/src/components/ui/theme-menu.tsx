@@ -5,9 +5,9 @@ import { cn } from '../../lib/cn.js';
 import { type ThemePreference, setPreference, useThemePreference } from '../../lib/theme.js';
 
 const options: { value: ThemePreference; label: string; hint?: string }[] = [
-  { value: 'system', label: 'Automático', hint: 'Igual que el celular' },
-  { value: 'light', label: 'Claro' },
   { value: 'dark', label: 'Oscuro' },
+  { value: 'light', label: 'Claro' },
+  { value: 'system', label: 'Automático', hint: 'Igual que el celular' },
 ];
 
 const icons = { system: SunMoon, light: SunMedium, dark: Moon } as const;
