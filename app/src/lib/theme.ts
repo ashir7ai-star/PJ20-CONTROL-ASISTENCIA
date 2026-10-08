@@ -1,6 +1,7 @@
 /**
- * Appearance preference: automático (follows the phone), claro or oscuro.
- * Stored per device; a tiny external store keeps every ThemeMenu in sync.
+ * Appearance preference: oscuro (the default — BLAZAR's main look), claro or
+ * automático (follows the phone). Stored per device only when it differs from
+ * the default; a tiny external store keeps every ThemeMenu in sync.
  * public/theme-init.js applies the same logic before the first paint.
  */
 import { useSyncExternalStore } from 'react';
@@ -9,6 +10,8 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 
 const STORAGE_KEY = 'pj20-tema';
 const THEME_COLOR = { light: '#ffffff', dark: '#050b16' } as const;
+/** What a first visit (or a device with nothing saved) shows. */
+export const DEFAULT_PREFERENCE: ThemePreference = 'dark';
 
 const listeners = new Set<() => void>();
 
@@ -21,9 +24,9 @@ function systemPrefersDark(): boolean {
 export function readPreference(): ThemePreference {
   try {
     const value = localStorage.getItem(STORAGE_KEY);
-    return value === 'light' || value === 'dark' ? value : 'system';
+    return value === 'light' || value === 'dark' || value === 'system' ? value : DEFAULT_PREFERENCE;
   } catch {
-    return 'system';
+    return DEFAULT_PREFERENCE;
   }
 }
 
@@ -40,7 +43,7 @@ export function applyTheme(preference: ThemePreference): void {
 
 export function setPreference(preference: ThemePreference): void {
   try {
-    if (preference === 'system') localStorage.removeItem(STORAGE_KEY);
+    if (preference === DEFAULT_PREFERENCE) localStorage.removeItem(STORAGE_KEY);
     else localStorage.setItem(STORAGE_KEY, preference);
   } catch {
     // Storage unavailable: the choice still applies for this visit.
