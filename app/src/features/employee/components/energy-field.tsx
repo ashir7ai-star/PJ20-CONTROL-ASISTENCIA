@@ -245,13 +245,23 @@ export function EnergyField({ size, buttonRadius, className }: EnergyFieldProps)
       last = performance.now();
       frame = requestAnimationFrame(tick);
     };
-    const idle =
+    // Idle-callback and timeout ids are separate namespaces: cancel with the matching API.
+    const cancelStart =
       typeof window.requestIdleCallback === 'function'
-        ? window.requestIdleCallback(start, { timeout: 1500 })
-        : window.setTimeout(start, 1200);
+        ? (() => {
+            const id = window.requestIdleCallback(start, { timeout: 1500 });
+            return () => {
+              window.cancelIdleCallback(id);
+            };
+          })()
+        : (() => {
+            const id = window.setTimeout(start, 1200);
+            return () => {
+              window.clearTimeout(id);
+            };
+          })();
     return () => {
-      if (typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idle);
-      window.clearTimeout(idle);
+      cancelStart();
       cancelAnimationFrame(frame);
       themeObserver.disconnect();
     };
