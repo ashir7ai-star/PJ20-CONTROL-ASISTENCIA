@@ -1,6 +1,6 @@
 # PJ20 — Plan maestro de desarrollo
 
-> Estado: **borrador para aprobación** · Última actualización: 2026-10-05
+> Estado: **aprobado** · Última actualización: 2026-10-08
 > Reglas del proyecto: [`CLAUDE.md`](../CLAUDE.md). Cada fase tendrá su propio plan detallado, aprobado antes de escribir código.
 
 ## Alcance de la versión 1
@@ -115,8 +115,8 @@ Cada fase termina con: verificación completa (lint, typecheck, pruebas, build, 
 | #   | Pendiente                                                                                           | Necesario para |
 | --- | --------------------------------------------------------------------------------------------------- | -------------- |
 | 1   | ~~Crear repositorio privado en GitHub~~ ✅ https://github.com/ashir7ai-star/PJ20-CONTROL-ASISTENCIA | Fase 0         |
-| 2   | Crear proyecto en Google Cloud Console + ID de cliente OAuth (origen `http://localhost:5173`)       | Fase 2         |
-| 3   | Correos de los administradores                                                                      | Fase 2         |
+| 2   | ~~Crear proyecto en Google Cloud Console + ID de cliente OAuth~~ ✅                                 | Fase 2         |
+| 3   | ~~Correos de los administradores~~ ✅ nathan@ylevigroup.com                                         | Fase 2         |
 | 4   | Un Android (y si es posible un iPhone) para pruebas reales                                          | Fases 3 y 5    |
 | 5   | Subdominio de la empresa                                                                            | Fase 8         |
 
@@ -126,7 +126,7 @@ Cada fase termina con: verificación completa (lint, typecheck, pruebas, build, 
 | ------------------------ | ------------------- |
 | 0 — Fundaciones          | ✅ Cerrada          |
 | 1 — Diseño               | ✅ Cerrada · v0.2.0 |
-| 2 — Backend núcleo       | Pendiente           |
+| 2 — Backend núcleo       | ✅ Cerrada · v0.3.0 |
 | 3 — App empleado         | Pendiente           |
 | 4 — Antifraude servidor  | Pendiente           |
 | 5 — APK Android          | Pendiente           |
