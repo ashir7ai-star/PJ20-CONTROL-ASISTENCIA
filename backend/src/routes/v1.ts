@@ -18,17 +18,19 @@ import {
   updateEmployeeSchema,
 } from '@pj20/shared';
 import { desc } from 'drizzle-orm';
+import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
 import {
+  SESSION_COOKIE,
   clearSessionCookie,
   requireAdmin,
   requireSession,
   setSessionCookie,
 } from '../auth/plugin.js';
 import { acceptConsent, type AuthDeps, currentUser, signInWithGoogle } from '../auth/service.js';
-import { revokeSession } from '../auth/sessions.js';
+import { hashToken, revokeSession } from '../auth/sessions.js';
 import { attendanceStatus, listDay, markAttendance, readSelfie } from '../attendance/service.js';
 import { businessToday } from '../attendance/rules.js';
 import { auditLog } from '../db/schema.js';
@@ -44,14 +46,18 @@ const idParams = z.object({ id: z.uuid() });
 
 export interface V1Options extends AuthDeps {
   photos: PhotoStore;
-  /** Sign-in attempts per minute per IP (brute-force protection, CLAUDE.md §1.9). */
+  /**
+   * Sign-in requests per minute per IP (CLAUDE.md §1.9). Generous on purpose:
+   * a whole office signs in from ONE public IP (shared wifi), and there is no
+   * password to guess (Google signs the token; nonces are single-use).
+   */
   authRateLimitMax?: number;
 }
 
 export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) => {
   const { db } = deps;
   const AUTH_RATE_LIMIT = {
-    rateLimit: { max: deps.authRateLimitMax ?? 10, timeWindow: '1 minute' },
+    rateLimit: { max: deps.authRateLimitMax ?? 60, timeWindow: '1 minute' },
   };
   const meta = (request: { headers: Record<string, unknown>; ip: string; id: string }) => ({
     userAgent:
@@ -117,7 +123,18 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
     {
       // The selfie travels as base64 in the JSON body (~1.4× the JPEG size).
       bodyLimit: 3_500_000,
-      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      config: {
+        // Per person, not per IP: 30 employees marking at 7:58 share the office IP.
+        // The key is the token hash, never the token itself.
+        rateLimit: {
+          max: 10,
+          timeWindow: '1 minute',
+          keyGenerator: (request: FastifyRequest) => {
+            const token = request.cookies[SESSION_COOKIE];
+            return token ? `mark:${hashToken(token)}` : `mark-ip:${request.ip}`;
+          },
+        },
+      },
       schema: {
         tags: ['attendance'],
         body: markRequestSchema,

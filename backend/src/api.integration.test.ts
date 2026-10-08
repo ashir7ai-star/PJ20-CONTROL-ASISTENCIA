@@ -585,12 +585,40 @@ describe('marcaciones (Fase 3)', () => {
     await expect(pool.query('DELETE FROM attendance_records')).rejects.toThrow(/permission denied/);
   });
 
+  it('el límite de marcaciones es por persona: la oficina comparte IP y nadie se bloquea por otro', async () => {
+    const abuser = await readyEmployee();
+    const codes: number[] = [];
+    for (let i = 0; i < 11; i++) {
+      const res = await call(
+        'POST',
+        '/attendance',
+        abuser.cookie,
+        markBody(i % 2 === 0 ? 'check_in' : 'check_out'),
+      );
+      codes.push(res.statusCode);
+    }
+    expect(codes.slice(0, 10).every((c) => c === 201)).toBe(true);
+    expect(codes[10]).toBe(429);
+
+    // Same IP (all inject() calls share it), different person: still allowed.
+    const colleague = await readyEmployee();
+    const res = await call('POST', '/attendance', colleague.cookie, markBody('check_in'));
+    expect(res.statusCode).toBe(201);
+  });
+
   it('un empleado con marcaciones no se puede borrar: solo desactivar', async () => {
     const employee = await readyEmployee();
     await call('POST', '/attendance', employee.cookie, markBody('check_in'));
     const admin = await loggedIn('admin');
     const res = await call('DELETE', `/admin/employees/${employee.user.id}`, admin.cookie);
     expect(res.statusCode).toBe(422);
+
+    // The list tells the panel in advance: consent + 1 record = 2.
+    const list = await call('GET', '/admin/employees', admin.cookie);
+    const row = list
+      .json<{ id: string; recordCount: number }[]>()
+      .find((e) => e.id === employee.user.id);
+    expect(row?.recordCount).toBe(2);
   });
 });
 

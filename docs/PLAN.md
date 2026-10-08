@@ -117,7 +117,7 @@ Cada fase termina con: verificación completa (lint, typecheck, pruebas, build, 
 | 1   | ~~Crear repositorio privado en GitHub~~ ✅ https://github.com/ashir7ai-star/PJ20-CONTROL-ASISTENCIA | Fase 0         |
 | 2   | ~~Crear proyecto en Google Cloud Console + ID de cliente OAuth~~ ✅                                 | Fase 2         |
 | 3   | ~~Correos de los administradores~~ ✅ nathan@ylevigroup.com                                         | Fase 2         |
-| 4   | Un Android (y si es posible un iPhone) para pruebas reales                                          | Fases 3 y 5    |
+| 4   | Un Android ✅ (falta un iPhone) para pruebas reales                                                 | Fases 3 y 5    |
 | 5   | Subdominio de la empresa                                                                            | Fase 8         |
 
 ## Registro de estado
@@ -127,7 +127,8 @@ Cada fase termina con: verificación completa (lint, typecheck, pruebas, build, 
 | 0 — Fundaciones          | ✅ Cerrada          |
 | 1 — Diseño               | ✅ Cerrada · v0.2.0 |
 | 2 — Backend núcleo       | ✅ Cerrada · v0.3.0 |
-| 3 — App empleado         | Pendiente           |
+| 2B — Staging (Easypanel) | ✅ Cerrada          |
+| 3 — App empleado         | ✅ Cerrada · v0.4.0 |
 | 4 — Antifraude servidor  | Pendiente           |
 | 5 — APK Android          | Pendiente           |
 | 6 — Panel administrativo | Pendiente           |

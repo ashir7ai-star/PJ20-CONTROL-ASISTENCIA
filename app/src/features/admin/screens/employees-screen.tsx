@@ -25,8 +25,10 @@ interface EmployeesScreenProps {
   /** The administrator using the panel. */
   me: Employee;
   recordCountById: Map<string, number>;
-  onAdd: (employee: { name: string; email: string; role: Role }) => void;
-  onAction: (employeeId: string, action: UserAction) => void;
+  /** Rejects with an Error whose message (Spanish) is shown in the form. */
+  onAdd: (employee: { name: string; email: string; role: Role }) => Promise<void>;
+  /** Rejects with an Error whose message (Spanish) is shown in the dialog. */
+  onAction: (employeeId: string, action: UserAction) => Promise<void>;
 }
 
 const actionCopy: Record<
@@ -95,6 +97,23 @@ export function EmployeesScreen({
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState(false);
   const [pending, setPending] = useState<{ employee: Employee; action: UserAction } | null>(null);
+  // Shared by both dialogs (only one is open at a time).
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /** Runs a server change; closes the dialog on success, keeps it open with the reason otherwise. */
+  const run = async (change: () => Promise<void>, close: () => void) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await change();
+      close();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'No se pudo guardar.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const visible = useMemo(() => {
     const q = query.trim().toLocaleLowerCase('es-CO');
@@ -114,6 +133,7 @@ export function EmployeesScreen({
           <Button
             icon={<UserPlus className="size-4" aria-hidden="true" />}
             onClick={() => {
+              setError(null);
               setAdding(true);
             }}
           >
@@ -195,6 +215,7 @@ export function EmployeesScreen({
                   <RowActions
                     employee={e}
                     onSelect={(action) => {
+                      setError(null);
                       setPending({ employee: e, action });
                     }}
                   />
@@ -216,24 +237,37 @@ export function EmployeesScreen({
             employees,
             recordCountById.get(pending.employee.id) ?? 0,
           )}
+          saving={saving}
+          error={error}
           onCancel={() => {
             setPending(null);
           }}
           onConfirm={() => {
-            onAction(pending.employee.id, pending.action);
-            setPending(null);
+            const { employee, action } = pending;
+            void run(
+              () => onAction(employee.id, action),
+              () => {
+                setPending(null);
+              },
+            );
           }}
         />
       )}
 
       <AddEmployeeSheet
         open={adding}
+        saving={saving}
+        error={error}
         onClose={() => {
           setAdding(false);
         }}
         onSave={(employee) => {
-          onAdd(employee);
-          setAdding(false);
+          void run(
+            () => onAdd(employee),
+            () => {
+              setAdding(false);
+            },
+          );
         }}
       />
     </>
@@ -242,10 +276,14 @@ export function EmployeesScreen({
 
 function AddEmployeeSheet({
   open,
+  saving,
+  error,
   onClose,
   onSave,
 }: {
   open: boolean;
+  saving: boolean;
+  error: string | null;
   onClose: () => void;
   onSave: (employee: { name: string; email: string; role: Role }) => void;
 }) {
@@ -278,13 +316,14 @@ function AddEmployeeSheet({
           <Button variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" form={formId}>
+          <Button type="submit" form={formId} loading={saving}>
             Guardar
           </Button>
         </div>
       }
     >
       <form id={formId} onSubmit={submit} className="flex flex-col gap-4">
+        {error && <ErrorNote message={error} />}
         <Field label="Nombre completo">
           {(id) => <TextInput id={id} name="name" required autoComplete="off" minLength={3} />}
         </Field>
@@ -354,12 +393,16 @@ function ConfirmActionSheet({
   employee,
   action,
   blocked,
+  saving,
+  error,
   onCancel,
   onConfirm,
 }: {
   employee: Employee;
   action: UserAction;
   blocked: string | null;
+  saving: boolean;
+  error: string | null;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -382,7 +425,11 @@ function ConfirmActionSheet({
             <Button variant="secondary" onClick={onCancel}>
               Cancelar
             </Button>
-            <Button variant={copy.destructive ? 'danger' : 'primary'} onClick={onConfirm}>
+            <Button
+              variant={copy.destructive ? 'danger' : 'primary'}
+              loading={saving}
+              onClick={onConfirm}
+            >
               {copy.confirm}
             </Button>
           </div>
@@ -390,6 +437,22 @@ function ConfirmActionSheet({
       }
     >
       <p className="text-[15px] leading-relaxed">{blocked ?? copy.body(employee)}</p>
+      {error && <ErrorNote message={error} className="mt-4" />}
     </Sheet>
+  );
+}
+
+/** The server's reason, in Spanish (duplicate e-mail, last admin, …). */
+function ErrorNote({ message, className }: { message: string; className?: string }) {
+  return (
+    <p
+      role="alert"
+      className={cn(
+        'rounded-2xl bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger',
+        className,
+      )}
+    >
+      {message}
+    </p>
   );
 }

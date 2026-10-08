@@ -4,28 +4,20 @@
  * map link and the selfie (served by the API to admin sessions only,
  * decision 0004). The rest of the panel stays a prototype until Fase 6.
  */
-import type { AdminAttendanceEntry, Me, ReviewReason } from '@pj20/shared';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Fingerprint,
-  LayoutDashboard,
-  LogOut,
-  MapPin,
-} from 'lucide-react';
+import type { AdminAttendanceEntry, ReviewReason } from '@pj20/shared';
+import { ChevronLeft, ChevronRight, LayoutDashboard, MapPin } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 
 import { api, ApiRequestError } from '../../api/client.js';
-import { Logo } from '../../components/brand/brand-header.js';
 import { Avatar } from '../../components/ui/avatar.js';
 import { Button } from '../../components/ui/button.js';
 import { Card } from '../../components/ui/card.js';
 import { Sheet } from '../../components/ui/sheet.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
 import { StatusBadge } from '../../components/ui/status-badge.js';
-import { ThemeMenu } from '../../components/ui/theme-menu.js';
 import { formatAccuracy, formatLongDate, formatTime, TIME_ZONE } from '../../lib/format.js';
+import { AdminShell } from './admin-shell.js';
 import { KindLabel } from './components/admin-ui.js';
 import { initials } from './model.js';
 
@@ -55,6 +47,10 @@ type Load =
   | { kind: 'failed'; message: string };
 
 export function TodayPage() {
+  return <AdminShell>{() => <TodayContent />}</AdminShell>;
+}
+
+function TodayContent() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const today = bogotaDate(new Date());
@@ -67,17 +63,9 @@ export function TodayPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      api<Me>('/me'),
-      api<AdminAttendanceEntry[]>(`/admin/attendance?date=${date}`),
-    ]).then(
-      ([me, entries]) => {
-        if (cancelled) return;
-        if (me.role !== 'admin') {
-          void navigate('/', { replace: true });
-          return;
-        }
-        setLoad({ kind: 'ready', entries });
+    api<AdminAttendanceEntry[]>(`/admin/attendance?date=${date}`).then(
+      (entries) => {
+        if (!cancelled) setLoad({ kind: 'ready', entries });
       },
       (error: unknown) => {
         if (cancelled) return;
@@ -121,93 +109,57 @@ export function TodayPage() {
     [setParams, today],
   );
 
-  const logout = async () => {
-    await api('/auth/logout', { method: 'POST' }).catch(() => undefined);
-    await navigate('/', { replace: true });
-  };
-
   return (
-    <div className="safe-area min-h-dvh bg-canvas text-ink">
-      <header className="sticky top-0 z-30 border-b border-line bg-surface-raised/95 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-          <div>
-            <Logo className="h-6" />
-            <p className="mt-1 text-[11px] font-medium tracking-wide text-ink-muted">
-              Control de Asistencia
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            <ThemeMenu />
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="grid size-11 place-items-center rounded-xl text-ink-muted transition-colors hover:bg-surface hover:text-ink"
-              aria-label="Cerrar sesión"
-            >
-              <LogOut className="size-5" aria-hidden="true" />
-            </button>
-            <Link
-              to="/"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-[14px] font-semibold text-primary-ink"
-            >
-              <Fingerprint className="size-4" aria-hidden="true" />
-              Marcar
-            </Link>
-          </div>
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[26px] font-semibold tracking-tight">
+            {isToday ? 'Marcaciones de hoy' : 'Marcaciones'}
+          </h1>
+          <p className="mt-1 text-[15px] capitalize text-ink-muted">
+            {formatLongDate(noonOf(date))}
+          </p>
         </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-[26px] font-semibold tracking-tight">
-              {isToday ? 'Marcaciones de hoy' : 'Marcaciones'}
-            </h1>
-            <p className="mt-1 text-[15px] capitalize text-ink-muted">
-              {formatLongDate(noonOf(date))}
-            </p>
-          </div>
-          <div className="flex gap-1">
-            <Button
-              variant="secondary"
-              className="w-11 px-0"
-              aria-label="Día anterior"
-              icon={<ChevronLeft className="size-5" aria-hidden="true" />}
-              onClick={() => {
-                goTo(shiftDate(date, -1));
-              }}
-            />
-            <Button
-              variant="secondary"
-              className="w-11 px-0"
-              aria-label="Día siguiente"
-              disabled={isToday}
-              icon={<ChevronRight className="size-5" aria-hidden="true" />}
-              onClick={() => {
-                goTo(shiftDate(date, 1));
-              }}
-            />
-          </div>
+        <div className="flex gap-1">
+          <Button
+            variant="secondary"
+            className="w-11 px-0"
+            aria-label="Día anterior"
+            icon={<ChevronLeft className="size-5" aria-hidden="true" />}
+            onClick={() => {
+              goTo(shiftDate(date, -1));
+            }}
+          />
+          <Button
+            variant="secondary"
+            className="w-11 px-0"
+            aria-label="Día siguiente"
+            disabled={isToday}
+            icon={<ChevronRight className="size-5" aria-hidden="true" />}
+            onClick={() => {
+              goTo(shiftDate(date, 1));
+            }}
+          />
         </div>
+      </div>
 
-        <DayContent
-          load={load}
-          isToday={isToday}
-          onRetry={() => {
-            setLoad({ kind: 'loading' });
-            setRefresh((n) => n + 1);
-          }}
-          onOpenSelfie={setSelfie}
-        />
+      <DayContent
+        load={load}
+        isToday={isToday}
+        onRetry={() => {
+          setLoad({ kind: 'loading' });
+          setRefresh((n) => n + 1);
+        }}
+        onOpenSelfie={setSelfie}
+      />
 
-        <Link
-          to="/prototipo/admin"
-          className="mt-10 flex items-center justify-center gap-2 text-[14px] font-medium text-info hover:underline"
-        >
-          <LayoutDashboard className="size-4" aria-hidden="true" />
-          Ver el panel completo (prototipo con datos de ejemplo)
-        </Link>
-      </main>
+      <Link
+        to="/prototipo/admin"
+        className="mt-10 flex items-center justify-center gap-2 text-[14px] font-medium text-info hover:underline"
+      >
+        <LayoutDashboard className="size-4" aria-hidden="true" />
+        Ver el panel completo (prototipo con datos de ejemplo)
+      </Link>
 
       <Sheet
         open={selfie !== null}
@@ -225,7 +177,7 @@ export function TodayPage() {
           />
         )}
       </Sheet>
-    </div>
+    </>
   );
 }
 
