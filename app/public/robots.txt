@@ -1,3 +1,15 @@
 # Aplicación interna de BLAZAR ENERGY: no debe aparecer en buscadores.
+# Solo los servicios que arman la vista previa de un enlace compartido
+# (WhatsApp, Facebook, Telegram, LinkedIn, Slack, X) pueden leer la portada.
+User-agent: facebookexternalhit
+User-agent: WhatsApp
+User-agent: TelegramBot
+User-agent: LinkedInBot
+User-agent: Slackbot-LinkExpanding
+User-agent: Twitterbot
+Allow: /$
+Allow: /og-image.jpg
+Disallow: /
+
 User-agent: *
 Disallow: /

@@ -16,6 +16,8 @@ COPY app app
 # Public OAuth client id, baked into the bundle at build time (it is not a secret).
 # Easypanel passes service environment variables as build arguments.
 ARG VITE_GOOGLE_CLIENT_ID
+# Public https address of this deployment (link previews: WhatsApp, Telegram…). Optional.
+ARG VITE_PUBLIC_URL
 RUN test -n "$VITE_GOOGLE_CLIENT_ID" || { echo "Falta VITE_GOOGLE_CLIENT_ID (argumento de compilación)" >&2; exit 1; }
 RUN pnpm --filter @pj20/app build
 
