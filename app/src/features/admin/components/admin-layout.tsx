@@ -42,11 +42,19 @@ interface AdminLayoutProps {
   admin: { name: string; initials: string };
   counts: AdminNavCounts;
   markHref: string;
+  onLogout: () => void;
   children: ReactNode;
 }
 
 /** Admin shell: sidebar on desktop, top bar + bottom tab bar on phones. */
-export function AdminLayout({ basePath, admin, counts, markHref, children }: AdminLayoutProps) {
+export function AdminLayout({
+  basePath,
+  admin,
+  counts,
+  markHref,
+  onLogout,
+  children,
+}: AdminLayoutProps) {
   const href = (to: string) => (to ? `${basePath}/${to}` : basePath);
 
   return (
@@ -101,6 +109,7 @@ export function AdminLayout({ basePath, admin, counts, markHref, children }: Adm
             type="button"
             className="grid size-11 place-items-center rounded-xl text-ink-muted transition-colors hover:bg-surface hover:text-ink"
             aria-label="Cerrar sesión"
+            onClick={onLogout}
           >
             <LogOut className="size-5" aria-hidden="true" />
           </button>
@@ -116,7 +125,7 @@ export function AdminLayout({ basePath, admin, counts, markHref, children }: Adm
           </p>
         </div>
         <div className="flex items-center gap-1">
-          <ThemeMenu />
+          <ThemeMenu onLogout={onLogout} />
           <Link
             to={markHref}
             className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-[14px] font-semibold text-primary-ink"

@@ -4,7 +4,9 @@
  * Decisions (approve/reject/add) live in memory so the flow can be tried.
  */
 import { useState } from 'react';
-import { Route, Routes, useSearchParams } from 'react-router';
+import { Route, Routes, useNavigate, useSearchParams } from 'react-router';
+
+import { api } from '../api/client.js';
 
 import { AdminLayout } from '../features/admin/components/admin-layout.js';
 import type { AttendanceRecord, Employee, Role } from '../features/admin/model.js';
@@ -33,6 +35,15 @@ export function AdminPrototype() {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [requests, setRequests] = useState(initialRequests);
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  // Public demo (GitHub Pages) has no server: everything stays fictional. Opened
+  // from the real app, "Marcar" and "Cerrar sesión" act on the real session.
+  const isDemo = import.meta.env.VITE_MODO === 'prototipo';
+
+  const logout = async () => {
+    if (!isDemo) await api('/auth/logout', { method: 'POST' }).catch(() => undefined);
+    await navigate(isDemo ? '/prototipo' : '/');
+  };
 
   const employeeById = new Map(employees.map((e) => [e.id, e]));
   const pending = records.filter((r) => r.review === 'pending');
@@ -80,7 +91,8 @@ export function AdminPrototype() {
       basePath={BASE}
       admin={{ name: me.name, initials: initials(me.name) }}
       counts={{ review: pending.length, devices: requests.length }}
-      markHref="/prototipo/empleado/marcar?rol=admin"
+      markHref={isDemo ? '/prototipo/empleado/marcar?rol=admin' : '/'}
+      onLogout={() => void logout()}
     >
       <Routes>
         <Route

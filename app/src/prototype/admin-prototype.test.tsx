@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { a11yViolations } from '../test/a11y.js';
 import { AdminPrototype } from './admin-prototype.js';
@@ -10,6 +10,7 @@ function renderAdmin(path = '/prototipo/admin') {
     [
       { path: '/prototipo/admin/*', element: <AdminPrototype /> },
       { path: '/prototipo/empleado/:pantalla', element: <p>Pantalla del empleado</p> },
+      { path: '/', element: <p>Inicio de la app real</p> },
     ],
     { initialEntries: [path] },
   );
@@ -157,10 +158,12 @@ describe('Celulares', () => {
 });
 
 describe('navegación', () => {
-  it('el botón "Marcar" lleva a la pantalla del empleado (el admin también marca)', async () => {
+  it('en la demo pública, "Marcar" lleva a la pantalla de ejemplo del empleado', async () => {
+    vi.stubEnv('VITE_MODO', 'prototipo');
     renderAdmin();
     fireEvent.click(first(await screen.findAllByRole('link', { name: /Marcar/ })));
     expect(await screen.findByText('Pantalla del empleado')).toBeInTheDocument();
+    vi.unstubAllEnvs();
   });
 });
 
@@ -227,5 +230,27 @@ describe('Empleados · gestión de roles y accesos', () => {
   it('el menú de acciones y el diálogo son accesibles', async () => {
     await openActions('Camila Hernández');
     expect(await a11yViolations(document.body)).toEqual([]);
+  });
+
+  it('abierto desde la app real, «Cerrar sesión» cierra la sesión del servidor y vuelve al inicio', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const { router } = renderAdmin();
+    fireEvent.click(first(screen.getAllByRole('button', { name: 'Cerrar sesión' })));
+    expect(await screen.findByText('Inicio de la app real')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/auth/logout',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    fetchMock.mockRestore();
+  });
+
+  it('«Marcar mi asistencia» vuelve al Marcar real', async () => {
+    const { router } = renderAdmin();
+    fireEvent.click(first(screen.getAllByRole('link', { name: /Marcar/ })));
+    expect(await screen.findByText('Inicio de la app real')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
   });
 });
