@@ -1,6 +1,6 @@
 # Fase 2 — Backend núcleo y autenticación · Plan detallado
 
-> Estado: **pendiente de aprobación** · 2026-10-06
+> Estado: ✅ **cerrada** · 2026-10-08 (aprobada con D1 y D2 el 2026-10-07)
 > Reglas aplicables: `CLAUDE.md` §1 (Seguridad), §3 (Privacidad), §4 (Arquitectura), §9 (Método)
 
 ## 1. Objetivo
@@ -85,13 +85,13 @@ La regla actual dice "access token de 15 min + refresh token". Propongo **sesion
 
 ## 8. Criterios de aceptación
 
-- [ ] Inicias sesión con tu Google en `localhost` y el sistema te reconoce como administrador.
-- [ ] Un correo no autorizado ve "cuenta no autorizada" y no obtiene sesión.
-- [ ] Desactivar a un usuario corta su sesión de inmediato.
-- [ ] La auditoría registra cada cambio de usuarios y la base de datos impide alterarla.
-- [ ] Un empleado no puede usar ningún endpoint de administración (403).
-- [ ] Todas las pruebas de seguridad en verde; lint, tipos, build y CI en verde.
-- [ ] Lighthouse de la app sin cambios negativos.
+- [x] Inicias sesión con tu Google en `localhost` y el sistema te reconoce como administrador. _(Prueba manual del dueño, 2026-10-08.)_
+- [x] Un correo no autorizado ve "cuenta no autorizada" y no obtiene sesión. _(Pruebas de integración y de la app.)_
+- [x] Desactivar a un usuario corta su sesión de inmediato.
+- [x] La auditoría registra cada cambio de usuarios y la base de datos impide alterarla.
+- [x] Un empleado no puede usar ningún endpoint de administración (403).
+- [x] Todas las pruebas de seguridad en verde; lint, tipos, build y CI en verde.
+- [x] Lighthouse de la app sin cambios negativos. _(Marcar 89–90; excepción aprobada para el inicio de sesión, §11.)_
 
 ## 9. Riesgos
 
@@ -108,3 +108,29 @@ La regla actual dice "access token de 15 min + refresh token". Propongo **sesion
 1. **Aprobar este plan**, incluidas las decisiones **D1** y **D2**.
 2. **Proyecto en Google Cloud Console** (detalle en la respuesta del chat).
 3. **Correos de los administradores iniciales.**
+
+## 11. Informe de ejecución (2026-10-07 → 2026-10-08)
+
+**Hecho y verificado en local:**
+
+- Pruebas: shared 12 · backend 25 · app 226 · integración con Postgres y Redis reales 26. Lint, tipos y build en verde.
+- La base de datos se probó atacándola: la API no puede alterar ni borrar la auditoría ni los consentimientos, ni crear o borrar tablas; ni siquiera el dueño puede modificar la auditoría.
+- Carga inicial del celular: 3 archivos y unos 104 KB comprimidos. Un guardián en el build impide que entren el panel de administración o la librería de validación (el servidor ya valida cada respuesta).
+- Error corregido: si el servidor no respondía, el botón de Google pedía el _nonce_ en bucle. Ahora muestra un aviso con «Reintentar» y lo cubre una prueba.
+
+**Lighthouse móvil** (3 corridas, con la API real):
+
+| Pantalla               | Rendimiento | Accesibilidad | Buenas prácticas |
+| ---------------------- | ----------- | ------------- | ---------------- |
+| Marcar (uso diario)    | 89–90       | 100           | 100              |
+| Inicio de sesión (`/`) | 84–87       | 100           | 96               |
+
+**Excepción a B.12 (aprobada por el dueño el 2026-10-08):** la pantalla de inicio de sesión queda por debajo de 90 en rendimiento por el script oficial de Google. D1 lo exige y su ejecución es la tarea más larga de la página (≈260 ms). Sin ese script, la pantalla marca 85–87. La puntuación de buenas prácticas (96) baja por el `401` normal de `/me` cuando nadie ha iniciado sesión. Esta pantalla se ve una vez cada 30 días por empleado; Marcar, que es la de todos los días, cumple.
+
+**Prueba manual real (2026-10-08):** el dueño inició sesión con Google (nathan@ylevigroup.com) en `localhost` y llegó a Marcar como administrador. Durante la prueba aparecieron tres problemas, todos corregidos y cubiertos por pruebas:
+
+- El cliente OAuth no tenía el origen `localhost` registrado (error `origin_mismatch`). Se reutilizó el cliente del proyecto anterior, limpiando sus direcciones.
+- En el panel (aún prototipo), «Cerrar sesión» no tenía acción y «Marcar mi asistencia» llevaba al Marcar de ejemplo. Ahora actúan sobre la sesión real.
+- La animación aparecía quieta porque Windows tenía apagados los efectos de animación. La app respeta esa preferencia a propósito (B.9). De paso se corrigió la forma en que se cancela su arranque.
+
+**Pendiente para las siguientes fases:** el panel de administración sigue con datos de ejemplo hasta la Fase 6. Las pruebas en celular necesitan HTTPS (Google, GPS, cámara y la cookie `__Host-`), por eso el despliegue a staging se adelanta. Ver `docs/PLAN.md`.

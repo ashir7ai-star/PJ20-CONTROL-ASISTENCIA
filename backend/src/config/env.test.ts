@@ -10,6 +10,7 @@ const validEnv = {
   S3_ACCESS_KEY: 'access',
   S3_SECRET_KEY: 'super-secret-value',
   S3_BUCKET: 'selfies',
+  GOOGLE_CLIENT_ID: '123-abc.apps.googleusercontent.com',
 };
 
 describe('loadEnv', () => {
@@ -38,6 +39,12 @@ describe('loadEnv', () => {
     const error = captureError(() => loadEnv({ ...validEnv, S3_ENDPOINT: 'not-a-url' }));
     expect((error as Error).message).toContain('S3_ENDPOINT');
     expect((error as Error).message).not.toContain('super-secret-value');
+  });
+
+  it('rejects a Google client id that is not a Google client id', () => {
+    expect(() => loadEnv({ ...validEnv, GOOGLE_CLIENT_ID: 'https://evil.example' })).toThrow(
+      InvalidEnvError,
+    );
   });
 
   it('rejects an invalid port', () => {

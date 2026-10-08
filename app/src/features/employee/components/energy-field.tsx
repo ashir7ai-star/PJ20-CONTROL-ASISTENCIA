@@ -237,8 +237,31 @@ export function EnergyField({ size, buttonRadius, className }: EnergyFieldProps)
       draw(ctx, streaks, size, geometry, palette, level.glow);
       frame = requestAnimationFrame(tick);
     };
-    frame = requestAnimationFrame(tick);
+
+    // Decorative motion never competes with loading the screen: start once the
+    // browser is idle after the first paint (fallback: 1.2 s), then fade in.
+    const start = () => {
+      canvas.dataset.running = 'true';
+      last = performance.now();
+      frame = requestAnimationFrame(tick);
+    };
+    // Idle-callback and timeout ids are separate namespaces: cancel with the matching API.
+    const cancelStart =
+      typeof window.requestIdleCallback === 'function'
+        ? (() => {
+            const id = window.requestIdleCallback(start, { timeout: 1500 });
+            return () => {
+              window.cancelIdleCallback(id);
+            };
+          })()
+        : (() => {
+            const id = window.setTimeout(start, 1200);
+            return () => {
+              window.clearTimeout(id);
+            };
+          })();
     return () => {
+      cancelStart();
       cancelAnimationFrame(frame);
       themeObserver.disconnect();
     };
@@ -249,7 +272,11 @@ export function EnergyField({ size, buttonRadius, className }: EnergyFieldProps)
       ref={canvasRef}
       data-testid="energy-field"
       aria-hidden="true"
-      className={cn('pointer-events-none', className)}
+      className={cn(
+        // Hidden until the animation starts (reduced motion: shown at once).
+        'pointer-events-none opacity-0 transition-opacity duration-700 data-[running=true]:opacity-100 motion-reduce:opacity-100',
+        className,
+      )}
       style={{ width: size, height: size }}
     />
   );

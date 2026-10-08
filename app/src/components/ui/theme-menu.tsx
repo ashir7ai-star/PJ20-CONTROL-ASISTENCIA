@@ -1,4 +1,4 @@
-import { Check, Moon, SunMedium, SunMoon } from 'lucide-react';
+import { Check, LogOut, Moon, SunMedium, SunMoon } from 'lucide-react';
 import { DropdownMenu } from 'radix-ui';
 
 import { cn } from '../../lib/cn.js';
@@ -13,7 +13,14 @@ const options: { value: ThemePreference; label: string; hint?: string }[] = [
 const icons = { system: SunMoon, light: SunMedium, dark: Moon } as const;
 
 /** "Apariencia": automático / claro / oscuro, remembered on this device. */
-export function ThemeMenu({ className }: { className?: string }) {
+export function ThemeMenu({
+  className,
+  onLogout,
+}: {
+  className?: string;
+  /** When present, the menu also offers "Cerrar sesión". */
+  onLogout?: () => void;
+}) {
   const preference = useThemePreference();
   const Icon = icons[preference];
 
@@ -24,7 +31,7 @@ export function ThemeMenu({ className }: { className?: string }) {
           'grid size-11 place-items-center rounded-xl text-ink-muted transition-colors hover:bg-surface hover:text-ink data-[state=open]:bg-surface',
           className,
         )}
-        aria-label="Apariencia"
+        aria-label={onLogout ? 'Cuenta y apariencia' : 'Apariencia'}
       >
         <Icon className="size-5" aria-hidden="true" />
       </DropdownMenu.Trigger>
@@ -61,6 +68,18 @@ export function ThemeMenu({ className }: { className?: string }) {
               </DropdownMenu.RadioItem>
             ))}
           </DropdownMenu.RadioGroup>
+          {onLogout && (
+            <>
+              <DropdownMenu.Separator className="my-1.5 h-px bg-line" />
+              <DropdownMenu.Item
+                onSelect={onLogout}
+                className="flex h-11 cursor-pointer select-none items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-danger outline-none data-highlighted:bg-danger-soft"
+              >
+                <LogOut className="size-4" aria-hidden="true" />
+                Cerrar sesión
+              </DropdownMenu.Item>
+            </>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

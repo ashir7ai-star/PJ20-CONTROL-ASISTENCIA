@@ -1,8 +1,8 @@
+import { CONSENT_LABEL } from '@pj20/shared/constants';
 import { FileWarning } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { BrandHeader } from '../components/brand/brand-header.js';
-import { CONSENT_VERSION } from '../features/employee/screens/consent-screen.js';
 
 /**
  * Política de Tratamiento de Datos Personales (Ley 1581 de 2012 y Decreto
@@ -27,7 +27,7 @@ export function PrivacyPolicyPage() {
           Política de Tratamiento de Datos Personales
         </h1>
         <p className="mt-2 text-[15px] text-ink-muted">
-          Aplicación «Control de Asistencia» · {CONSENT_VERSION}
+          Aplicación «Control de Asistencia» · {CONSENT_LABEL}
         </p>
 
         <Section title="1. Responsable del tratamiento">
@@ -147,7 +147,7 @@ export function PrivacyPolicyPage() {
 
         <Section title="9. Vigencia">
           <p>
-            Esta política rige desde su publicación ({CONSENT_VERSION}). Cualquier cambio sustancial
+            Esta política rige desde su publicación ({CONSENT_LABEL}). Cualquier cambio sustancial
             se informará en la aplicación y, cuando la ley lo exija, se solicitará una nueva
             autorización.
           </p>

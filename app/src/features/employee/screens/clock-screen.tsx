@@ -21,17 +21,25 @@ interface ClockScreenProps {
   onMark?: () => void;
   /** Only for administrators: return to the admin panel. */
   onOpenAdmin?: () => void;
+  /** Real app: shows "Cerrar sesión" in the account menu. */
+  onLogout?: () => void;
 }
 
 /** Main employee screen ("Marcar"): live clock, shift status and the Pulso button. */
-export function ClockScreen({ view, now: fixedNow, onMark, onOpenAdmin }: ClockScreenProps) {
+export function ClockScreen({
+  view,
+  now: fixedNow,
+  onMark,
+  onOpenAdmin,
+  onLogout,
+}: ClockScreenProps) {
   const now = useNow('minute', fixedNow);
   const clock = formatClock(now);
   const action = nextAction(view.shift);
   const searching = view.location.state === 'searching';
 
   return (
-    <EmployeeLayout topRight={<ThemeMenu />}>
+    <EmployeeLayout topRight={<ThemeMenu {...(onLogout ? { onLogout } : {})} />}>
       <section className="mt-10 flex flex-col items-center text-center" aria-label="Hora actual">
         <p className="text-[15px] text-ink-muted">
           Hola, {view.firstName} · {formatLongDate(now)}

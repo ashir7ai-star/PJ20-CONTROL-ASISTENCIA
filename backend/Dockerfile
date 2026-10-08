@@ -25,6 +25,8 @@ WORKDIR /srv
 COPY --from=build --chown=node:node /out/package.json ./
 COPY --from=build --chown=node:node /out/node_modules ./node_modules
 COPY --from=build --chown=node:node /repo/backend/dist ./dist
+COPY --from=build --chown=node:node /repo/backend/migrations ./migrations
+ENV MIGRATIONS_DIR=/srv/migrations
 
 # Never run as root (CLAUDE.md §7.1).
 USER node

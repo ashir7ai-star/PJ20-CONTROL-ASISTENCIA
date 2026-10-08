@@ -13,7 +13,13 @@ const envSchema = z.object({
     .transform((value) => value.split(',').map((origin) => origin.trim()))
     .pipe(z.array(z.url())),
 
+  /** Restricted API user (member of pj20_app), never the owner role. */
   DATABASE_URL: z.url(),
+
+  /** Google Sign-In client id (public). Used to validate ID tokens (D1). */
+  GOOGLE_CLIENT_ID: z.string().regex(/^[\w-]+\.apps\.googleusercontent\.com$/),
+  /** Reverse-proxy hops in front of the API (Easypanel/Traefik: 1). */
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
   REDIS_URL: z.url(),
 
   S3_ENDPOINT: z.url(),

@@ -5,6 +5,7 @@ import {
   MapPinOff,
   ShieldAlert,
   ShieldX,
+  UserX,
   Signal,
   Smartphone,
   WifiOff,
@@ -23,6 +24,7 @@ export const problemKinds = [
   'device-not-authorized',
   'session-expired',
   'android-browser',
+  'not-authorized',
 ] as const;
 
 export type ProblemKind = (typeof problemKinds)[number];
@@ -99,6 +101,13 @@ export const problems: Record<ProblemKind, ProblemContent> = {
     title: 'Usa la aplicación de Android',
     body: 'En celulares Android solo se puede marcar desde la aplicación oficial de BLAZAR. Descárgala e instálala; solo toma un minuto.',
     primary: 'Descargar aplicación',
+  },
+  'not-authorized': {
+    icon: UserX,
+    tone: 'danger',
+    title: 'Tu cuenta no está autorizada',
+    body: 'Inicia sesión con el correo que registró BLAZAR ENERGY. Si crees que es un error, pide acceso a tu administrador.',
+    primary: 'Usar otra cuenta',
   },
 };
 

@@ -1,13 +1,11 @@
 import { Camera, Check, MapPin, Smartphone } from 'lucide-react';
+import { CONSENT_LABEL } from '@pj20/shared/constants';
 import { Checkbox } from 'radix-ui';
 import { type ReactNode, useId, useState } from 'react';
 
 import { Button } from '../../../components/ui/button.js';
 import { Card } from '../../../components/ui/card.js';
 import { EmployeeLayout } from '../components/employee-layout.js';
-
-/** Version of the consent text. Stored with each acceptance (CLAUDE.md §3.2). */
-export const CONSENT_VERSION = 'Versión 1 · octubre de 2026';
 
 interface ConsentScreenProps {
   onAccept?: () => void;
@@ -76,7 +74,7 @@ export function ConsentScreen({ onAccept }: ConsentScreenProps) {
         <Button size="lg" block className="mt-5" disabled={!accepted} onClick={onAccept}>
           Aceptar y continuar
         </Button>
-        <p className="mt-3 text-center text-[12px] text-ink-muted">{CONSENT_VERSION}</p>
+        <p className="mt-3 text-center text-[12px] text-ink-muted">{CONSENT_LABEL}</p>
       </div>
     </EmployeeLayout>
   );

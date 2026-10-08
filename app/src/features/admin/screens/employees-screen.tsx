@@ -18,7 +18,7 @@ import { StatusBadge } from '../../../components/ui/status-badge.js';
 import { cn } from '../../../lib/cn.js';
 import { PageHeader } from '../components/admin-ui.js';
 import { type Employee, type Role, initials, roleLabels } from '../model.js';
-import { type UserAction, availableActions, blockReason } from '../permissions.js';
+import { type UserAction, availableActions, blockReason } from '@pj20/shared';
 
 interface EmployeesScreenProps {
   employees: Employee[];

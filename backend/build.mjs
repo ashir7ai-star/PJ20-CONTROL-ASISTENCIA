@@ -9,8 +9,14 @@ const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url)
 const external = Object.keys(pkg.dependencies).filter((name) => !name.startsWith('@pj20/'));
 
 await build({
-  entryPoints: ['src/server.ts'],
-  outfile: 'dist/server.js',
+  // API + operational commands (run inside the container on deploy).
+  entryPoints: {
+    server: 'src/server.ts',
+    migrate: 'src/db/migrate.ts',
+    'db-usuario-app': 'src/db/setup-app-user.ts',
+    'admin-crear': 'src/cli/create-admin.ts',
+  },
+  outdir: 'dist',
   bundle: true,
   platform: 'node',
   format: 'esm',
