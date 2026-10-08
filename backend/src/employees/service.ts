@@ -12,12 +12,12 @@ import {
   blockReason,
   createEmployeeSchema,
 } from '@pj20/shared';
-import { asc, count, eq, and, sql } from 'drizzle-orm';
+import { asc, count, eq, sql } from 'drizzle-orm';
 
 import { type AuditContext, audit } from '../audit.js';
 import { revokeAllSessions } from '../auth/sessions.js';
 import type { Database, Executor } from '../db/client.js';
-import { consents, employees } from '../db/schema.js';
+import { attendanceRecords, consents, employees } from '../db/schema.js';
 import { errors } from '../errors.js';
 
 type EmployeeRow = typeof employees.$inferSelect;
@@ -153,11 +153,17 @@ export async function deleteEmployee(
 ): Promise<void> {
   await db.transaction(async (tx) => {
     const { target, locked } = await lockForChange(tx, targetId);
-    const [history] = await tx
+    // Anyone with history (consent or attendance) is deactivated, never deleted.
+    const [consentHistory] = await tx
       .select({ total: count() })
       .from(consents)
-      .where(and(eq(consents.employeeId, targetId)));
-    ensureAllowed('delete', target, me, locked, history?.total ?? 0);
+      .where(eq(consents.employeeId, targetId));
+    const [attendanceHistory] = await tx
+      .select({ total: count() })
+      .from(attendanceRecords)
+      .where(eq(attendanceRecords.employeeId, targetId));
+    const history = (consentHistory?.total ?? 0) + (attendanceHistory?.total ?? 0);
+    ensureAllowed('delete', target, me, locked, history);
 
     await tx.delete(employees).where(eq(employees.id, targetId));
     await audit(tx, context, {

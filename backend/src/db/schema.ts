@@ -9,10 +9,12 @@ import {
   bigserial,
   boolean,
   check,
+  doublePrecision,
   index,
   jsonb,
   pgEnum,
   pgTable,
+  real,
   text,
   timestamp,
   uuid,
@@ -97,4 +99,46 @@ export const auditLog = pgTable(
     ip: text('ip'),
   },
   (t) => [index('audit_log_at_idx').on(t.at)],
+);
+
+export const attendanceKindEnum = pgEnum('attendance_kind', ['check_in', 'check_out']);
+export const reviewStatusEnum = pgEnum('review_status', ['ok', 'pending']);
+
+/**
+ * Clock-in/out records (CLAUDE.md §2). Immutable: a trigger rejects UPDATE,
+ * DELETE and TRUNCATE and the API role may only SELECT and INSERT. A
+ * correction will be a new adjustment record (Fase 6), never an edit.
+ * server_time is the only time that counts; device_time is informative.
+ */
+export const attendanceRecords = pgTable(
+  'attendance_records',
+  {
+    id: uuid('id').primaryKey(),
+    employeeId: uuid('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'restrict' }),
+    kind: attendanceKindEnum('kind').notNull(),
+    serverTime: timestamp('server_time', { withTimezone: true }).notNull().defaultNow(),
+    deviceTime: timestamp('device_time', { withTimezone: true }),
+    latitude: doublePrecision('latitude').notNull(),
+    longitude: doublePrecision('longitude').notNull(),
+    accuracyM: real('accuracy_m').notNull(),
+    locationCapturedAt: timestamp('location_captured_at', { withTimezone: true }).notNull(),
+    /** Object key of the selfie in the private bucket. */
+    photoKey: text('photo_key').notNull(),
+    ip: text('ip'),
+    userAgent: text('user_agent'),
+    reviewStatus: reviewStatusEnum('review_status').notNull(),
+    reviewReasons: text('review_reasons')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+  },
+  (t) => [
+    index('attendance_employee_time_idx').on(t.employeeId, t.serverTime),
+    index('attendance_server_time_idx').on(t.serverTime),
+    check('attendance_latitude_range', sql`${t.latitude} BETWEEN -90 AND 90`),
+    check('attendance_longitude_range', sql`${t.longitude} BETWEEN -180 AND 180`),
+    check('attendance_accuracy_positive', sql`${t.accuracyM} >= 0`),
+  ],
 );

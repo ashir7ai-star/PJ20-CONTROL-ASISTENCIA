@@ -25,6 +25,7 @@ while (pending.length > 0) {
 
 const forbidden = [
   // Strings that only exist in admin screens.
+  ['panel de administración', 'Marcaciones de hoy'],
   ['panel de administración', 'Trabajando ahora'],
   ['panel de administración', 'Agregar empleado'],
   ['panel de administración', 'Solicitudes pendientes'],

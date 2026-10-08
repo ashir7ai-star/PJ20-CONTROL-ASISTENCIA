@@ -111,7 +111,7 @@ Prohibido confiar en lo que reporta el celular. La defensa es por capas y **la d
    - País/ciudad de la IP incompatible con el GPS.
    - Ubicación muy antigua (timestamp del fix GPS con más de 30 s).
      Las marcaciones sospechosas se guardan **marcadas** y aparecen en una bandeja de revisión del administrador.
-6. **Selfie obligatoria** en cada marcación, tomada **en vivo con la cámara frontal** dentro de la app (prohibido elegir de la galería). **Debe mostrar el rostro y el lugar de fondo** (encuadre amplio, brazo estirado) para que el administrador verifique que el empleado está en su sitio de trabajo. Se guarda en almacenamiento privado; solo se accede con URLs firmadas de corta duración.
+6. **Selfie obligatoria** en cada marcación, tomada **en vivo con la cámara frontal** dentro de la app (prohibido elegir de la galería). **Debe mostrar el rostro y el lugar de fondo** (encuadre amplio, brazo estirado) para que el administrador verifique que el empleado está en su sitio de trabajo. Se guarda en almacenamiento privado que nunca se expone a internet; solo la ven administradores con sesión válida, a través de la API, que la verifica en cada petición (decisión 0004).
 7. **Ninguna capa es infalible por sí sola.** Toda nueva técnica de fraude detectada se documenta y se agrega como capa adicional.
 
 ## 3. Privacidad (Ley 1581 de 2012 — Habeas Data, Colombia)

@@ -5,6 +5,7 @@ import { createNonceStore } from './auth/nonce.js';
 import { createDatabase } from './db/client.js';
 import { checkDatabase, createDatabasePool } from './infra/postgres.js';
 import { checkCache, createRedisClient } from './infra/redis.js';
+import { createPhotoStore } from './infra/photo-store.js';
 import { checkStorage, createStorageClient, ensureBucket } from './infra/storage.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -39,6 +40,7 @@ async function main(): Promise<void> {
       redis,
       verifier: createGoogleVerifier(env.GOOGLE_CLIENT_ID),
       nonces: createNonceStore(redis),
+      photos: createPhotoStore(storage, env.S3_BUCKET),
     },
   });
 

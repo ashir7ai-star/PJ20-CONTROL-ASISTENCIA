@@ -1,7 +1,6 @@
 /**
- * The real application entry (Fase 2): session → consent → Marcar.
- * Marcar still shows example shift data until attendance arrives in Fase 3;
- * the identity, role, consent and session are real.
+ * The real application entry: session → consent → Marcar (real shift status
+ * and marking with selfie + GPS since Fase 3).
  */
 import type { Me } from '@pj20/shared';
 import { CONSENT_VERSION } from '@pj20/shared/constants';
@@ -11,13 +10,12 @@ import { useNavigate } from 'react-router';
 import { api, ApiRequestError } from '../api/client.js';
 import { GoogleButton } from '../auth/google-button.js';
 import { AppLoading } from '../components/brand/app-loading.js';
-import type { EmployeeView } from '../features/employee/model.js';
 import { LoginScreen } from '../features/employee/screens/login-screen.js';
 import { ProblemScreen } from '../features/employee/screens/problem-screen.js';
 
 // Signed-in screens load on demand: the sign-in screen (first visit) stays light.
-const ClockScreen = lazy(() =>
-  import('../features/employee/screens/clock-screen.js').then((m) => ({ default: m.ClockScreen })),
+const EmployeeHome = lazy(() =>
+  import('../features/employee/employee-home.js').then((m) => ({ default: m.EmployeeHome })),
 );
 const ConsentScreen = lazy(() =>
   import('../features/employee/screens/consent-screen.js').then((m) => ({
@@ -32,16 +30,6 @@ type State =
   | { kind: 'not-authorized' }
   | { kind: 'offline' }
   | { kind: 'signed-in'; me: Me };
-
-/** Until Fase 3 the shift itself is example data; the person is real. */
-function viewFor(me: Me): EmployeeView {
-  return {
-    firstName: me.name.split(/\s+/)[0] ?? me.name,
-    shift: { kind: 'off' },
-    lastRecord: null,
-    location: { state: 'ready', accuracyM: 6 },
-  };
-}
 
 /** Who is signed in, if anyone. Never throws: every outcome is a screen. */
 async function readSession(): Promise<State> {
@@ -99,6 +87,10 @@ export function RealApp() {
     }
   }, []);
 
+  const onSessionExpired = useCallback(() => {
+    setState({ kind: 'signed-out', error: 'Tu sesión terminó. Inicia sesión de nuevo.' });
+  }, []);
+
   const logout = async () => {
     await api('/auth/logout', { method: 'POST' }).catch(() => undefined);
     setState({ kind: 'signed-out', error: null });
@@ -149,13 +141,14 @@ export function RealApp() {
               }
             />
           ) : (
-            <ClockScreen
-              view={viewFor(me)}
+            <EmployeeHome
+              me={me}
               onLogout={() => void logout()}
+              onSessionExpired={onSessionExpired}
               {...(me.role === 'admin'
                 ? {
                     onOpenAdmin: () => {
-                      void navigate('/prototipo/admin');
+                      void navigate('/admin');
                     },
                   }
                 : {})}

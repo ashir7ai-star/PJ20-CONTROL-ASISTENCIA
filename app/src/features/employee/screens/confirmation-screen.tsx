@@ -12,6 +12,8 @@ interface ConfirmationScreenProps {
   /** Time assigned by the server. */
   serverTime: Date;
   accuracyM: number;
+  /** Accepted but flagged (weak GPS, old fix): the employee is told openly. */
+  reviewPending?: boolean;
   onDone?: () => void;
 }
 
@@ -20,6 +22,7 @@ export function ConfirmationScreen({
   kind,
   serverTime,
   accuracyM,
+  reviewPending = false,
   onDone,
 }: ConfirmationScreenProps) {
   const clock = formatClock(serverTime);
@@ -54,6 +57,11 @@ export function ConfirmationScreen({
           <Detail icon={<Camera className="size-5" />} label="Selfie" value="Guardada" />
         </ul>
       </Card>
+      {reviewPending && (
+        <p className="mt-4 rounded-2xl bg-warning-soft px-4 py-3 text-center text-[14px] font-medium text-warning">
+          Quedó registrada. Como la señal de GPS era débil, tu administrador la revisará.
+        </p>
+      )}
 
       <div className="mt-auto pt-10">
         <Button size="lg" block onClick={onDone}>

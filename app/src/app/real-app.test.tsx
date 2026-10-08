@@ -34,7 +34,7 @@ const notLoggedIn: Handler = () => ({
 // The signed-in screens are lazy: load them once so findBy* never races a cold transform.
 beforeAll(async () => {
   await Promise.all([
-    import('../features/employee/screens/clock-screen.js'),
+    import('../features/employee/employee-home.js'),
     import('../features/employee/screens/consent-screen.js'),
   ]);
 });
@@ -45,6 +45,10 @@ beforeEach(() => {
     'GET /api/v1/me': notLoggedIn,
     'POST /api/v1/auth/nonce': () => ({ status: 200, json: { nonce: 'nonce-de-prueba-123456' } }),
     'POST /api/v1/auth/logout': () => ({ status: 204 }),
+    'GET /api/v1/attendance/status': () => ({
+      status: 200,
+      json: { onDutySince: null, lastRecord: null },
+    }),
   };
   vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
@@ -86,7 +90,7 @@ function renderApp() {
   const router = createMemoryRouter(
     [
       { path: '/', element: <RealApp /> },
-      { path: '/prototipo/admin', element: <p>Panel del administrador</p> },
+      { path: '/admin', element: <p>Panel del administrador</p> },
     ],
     { initialEntries: ['/'] },
   );
