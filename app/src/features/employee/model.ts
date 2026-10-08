@@ -2,11 +2,16 @@
  * View model for the employee screens. In Fase 1 it is filled with prototype
  * data; from Fase 3 on it is built from the real API.
  */
-export type AttendanceKind = 'check_in' | 'check_out';
+import type { AttendanceKind } from '@pj20/shared';
+
+export type { AttendanceKind };
+export { WEAK_ACCURACY_M } from '@pj20/shared/constants';
 
 export type ShiftStatus = { kind: 'off' } | { kind: 'on'; since: Date };
 
+/** 'on-mark': the real app reads GPS only at the moment of marking (§3.1). */
 export type LocationReadiness =
+  | { state: 'on-mark' }
   | { state: 'searching' }
   | { state: 'ready'; accuracyM: number }
   | { state: 'weak'; accuracyM: number };
@@ -30,6 +35,3 @@ export const attendanceLabels: Record<
 export function nextAction(shift: ShiftStatus): AttendanceKind {
   return shift.kind === 'on' ? 'check_out' : 'check_in';
 }
-
-/** Accuracy above this is accepted but flagged for review (CLAUDE.md §2.6). */
-export const WEAK_ACCURACY_M = 100;

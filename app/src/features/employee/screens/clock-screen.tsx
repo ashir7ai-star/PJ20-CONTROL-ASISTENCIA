@@ -133,6 +133,7 @@ function LocationIcon({ state }: { state: EmployeeView['location']['state'] }) {
 
 function LocationLabel({ view }: { view: EmployeeView }) {
   const { location } = view;
+  if (location.state === 'on-mark') return <>Ubicación al marcar</>;
   if (location.state === 'searching') return <>Buscando GPS…</>;
   if (location.state === 'weak') {
     return <span className="text-warning">Señal débil {formatAccuracy(location.accuracyM)}</span>;

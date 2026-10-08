@@ -27,7 +27,7 @@ describe('flujo completo del prototipo del empleado', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Aceptar y continuar' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Permitir acceso' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Marcar entrada' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Tomar selfie' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Tomar selfie y marcar' }));
 
     expect(await screen.findByRole('heading', { name: 'Entrada registrada' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Listo' }));
@@ -68,7 +68,7 @@ describe('administrador marcando su asistencia', () => {
     render(<RouterProvider router={router} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Marcar entrada' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Tomar selfie' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Tomar selfie y marcar' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Listo' }));
 
     const back = await screen.findByRole('button', { name: 'Ir al panel de administración' });
@@ -103,7 +103,7 @@ describe('menú del prototipo', () => {
       { initialEntries: ['/prototipo/empleado/selfie?tipo=entrada'] },
     );
     render(<RouterProvider router={router} />);
-    await screen.findByRole('button', { name: 'Tomar selfie' });
+    await screen.findByRole('button', { name: 'Tomar selfie y marcar' });
     expect(screen.queryByRole('button', { name: 'Menú del prototipo' })).toBeNull();
   });
 });

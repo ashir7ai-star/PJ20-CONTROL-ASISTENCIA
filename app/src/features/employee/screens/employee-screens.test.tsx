@@ -127,7 +127,7 @@ describe('Selfie', () => {
     render(<SelfieScreen kind="check_in" />);
     expect(screen.getByText('Que se vean tu rostro y el lugar')).toBeInTheDocument();
     expect(screen.getByText(/deja ver lo que hay detrás de ti/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Tomar selfie' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tomar selfie y marcar' })).toBeInTheDocument();
   });
 
   it('el consentimiento informa que la foto incluye el lugar', () => {

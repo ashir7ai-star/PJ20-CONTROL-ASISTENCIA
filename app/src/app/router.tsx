@@ -24,6 +24,14 @@ export const router = createBrowserRouter(
               <RealApp />
             ),
         },
+        {
+          // Real admin page (Fase 3): its own bundle, never shipped to employee devices.
+          path: '/admin',
+          lazy: async () => {
+            const { TodayPage } = await import('../features/admin/today-page.js');
+            return { Component: TodayPage };
+          },
+        },
         // Prototype (Fase 1 review tool): its own bundle, never loaded by the real app.
         {
           path: '/prototipo',

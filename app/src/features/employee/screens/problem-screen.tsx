@@ -1,4 +1,5 @@
 import {
+  CircleAlert,
   Clock,
   Download,
   type LucideIcon,
@@ -25,6 +26,7 @@ export const problemKinds = [
   'session-expired',
   'android-browser',
   'not-authorized',
+  'mark-failed',
 ] as const;
 
 export type ProblemKind = (typeof problemKinds)[number];
@@ -109,6 +111,14 @@ export const problems: Record<ProblemKind, ProblemContent> = {
     body: 'Inicia sesión con el correo que registró BLAZAR ENERGY. Si crees que es un error, pide acceso a tu administrador.',
     primary: 'Usar otra cuenta',
   },
+  'mark-failed': {
+    icon: CircleAlert,
+    tone: 'danger',
+    title: 'No se pudo registrar',
+    body: 'Tu marcación no quedó guardada. Revisa tu conexión e inténtalo de nuevo.',
+    primary: 'Intentar de nuevo',
+    secondary: 'Volver',
+  },
 };
 
 const toneStyles: Record<Tone, string> = {
@@ -119,11 +129,13 @@ const toneStyles: Record<Tone, string> = {
 
 interface ProblemScreenProps {
   kind: ProblemKind;
+  /** Replaces the default explanation (e.g. exact accuracy, iPhone vs Android steps). */
+  body?: string;
   onPrimary?: () => void;
   onSecondary?: () => void;
 }
 
-export function ProblemScreen({ kind, onPrimary, onSecondary }: ProblemScreenProps) {
+export function ProblemScreen({ kind, body, onPrimary, onSecondary }: ProblemScreenProps) {
   const content = problems[kind];
   const Icon = content.icon;
   return (
@@ -135,7 +147,9 @@ export function ProblemScreen({ kind, onPrimary, onSecondary }: ProblemScreenPro
           <Icon className="size-9" aria-hidden="true" />
         </span>
         <h1 className="mt-6 text-[26px] font-semibold tracking-tight">{content.title}</h1>
-        <p className="mt-3 max-w-sm text-[16px] leading-relaxed text-ink-muted">{content.body}</p>
+        <p className="mt-3 max-w-sm text-[16px] leading-relaxed text-ink-muted">
+          {body ?? content.body}
+        </p>
         {content.note && (
           <p
             className={cn(
@@ -152,7 +166,8 @@ export function ProblemScreen({ kind, onPrimary, onSecondary }: ProblemScreenPro
         <Button size="lg" block onClick={onPrimary}>
           {content.primary}
         </Button>
-        {content.secondary && (
+        {/* Never a button without an action. */}
+        {content.secondary && onSecondary && (
           <Button size="lg" variant="ghost" block onClick={onSecondary}>
             {content.secondary}
           </Button>
