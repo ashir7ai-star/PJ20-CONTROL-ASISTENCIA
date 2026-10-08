@@ -32,6 +32,13 @@ export const router = createBrowserRouter(
             return { Component: TodayPage };
           },
         },
+        {
+          path: '/admin/empleados',
+          lazy: async () => {
+            const { EmployeesPage } = await import('../features/admin/employees-page.js');
+            return { Component: EmployeesPage };
+          },
+        },
         // Prototype (Fase 1 review tool): its own bundle, never loaded by the real app.
         {
           path: '/prototipo',

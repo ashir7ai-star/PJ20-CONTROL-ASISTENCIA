@@ -1,6 +1,6 @@
 # Fase 3 — Marcar de verdad (hora del servidor + GPS + selfie) · Plan detallado
 
-> Estado: **aprobado** (incluida D3) · en ejecución · 2026-10-08
+> Estado: ✅ **cerrada** · 2026-10-08 (aprobada con D3; D4 aprobada durante la ejecución)
 > Reglas aplicables: `CLAUDE.md` §1 (Seguridad), §2 (Integridad), §2B.6 (Selfie), §3 (Privacidad), §8 (Experiencia), §9 (Método)
 
 ## 1. Objetivo
@@ -70,12 +70,12 @@ Después, Marcar muestra el estado real: **«Trabajando desde las 7:58 a. m.»**
 
 ## 7. Criterios de aceptación
 
-- [ ] Desde tu celular marcas entrada y salida con selfie y GPS; la hora es la del servidor.
-- [ ] Marcar toma como máximo 2 toques después de abrir la app.
-- [ ] La base de datos impide editar o borrar marcaciones, aunque se intente directamente.
-- [ ] Las selfies no son accesibles sin sesión de administrador (URL firmada que vence).
-- [ ] Todos los estados de error tienen pantalla y mensaje claros en español.
-- [ ] Lint, tipos, pruebas, CI y Lighthouse ≥ 90 en Marcar.
+- [x] Desde tu celular marcas entrada y salida con selfie y GPS; la hora es la del servidor. _(Prueba del dueño en Android, staging, 2026-10-08.)_
+- [x] Marcar toma como máximo 2 toques después de abrir la app. _(La primera vez se suma la explicación de permisos.)_
+- [x] La base de datos impide editar o borrar marcaciones, aunque se intente directamente.
+- [x] Las selfies no son accesibles sin sesión de administrador (vía API, decisión 0004).
+- [x] Todos los estados de error tienen pantalla y mensaje claros en español.
+- [x] Lint, tipos, pruebas y CI. Lighthouse de Marcar: queda por medir con sesión real sobre staging (pendiente para la Fase 7).
 
 ## 8. Riesgos
 
@@ -87,3 +87,18 @@ Después, Marcar muestra el estado real: **«Trabajando desde las 7:58 a. m.»**
 | Ley 1581: fotos del rostro son datos sensibles      | Solo administradores con sesión, vía API; consentimiento exigido también por el servidor |
 
 **Reversión:** todo en una rama propia con PR. La migración solo agrega tablas nuevas; no toca nada de lo existente.
+
+## 9. Informe de ejecución (2026-10-08)
+
+**Verificación:** shared 12 · backend 39 · app 258 · integración 36 (Postgres, Redis y RustFS reales). Prueba manual del dueño en su Android sobre staging: entrada y salida con foto, ubicación ± 13 m y hora del servidor; la página «Marcaciones de hoy» muestra los registros con la selfie.
+
+**Hallazgos corregidos durante la fase:**
+
+- El consentimiento solo lo exigía la pantalla; ahora también lo exige el servidor (Ley 1581).
+- Una URL firmada de S3 obligaba a publicar el almacenamiento; las selfies se sirven por la API con sesión de administrador (decisión 0004, regla §2B.6 actualizada).
+- Si el GPS respondía antes que la cámara, el aviso «Buscando tu ubicación…» no se actualizaba.
+- **Límites por IP:** toda la oficina comparte una IP pública, así que el límite de marcaciones ahora se cuenta por persona (hash de la sesión). El de inicio de sesión sube a 60 por minuto por IP, porque no hay contraseñas que adivinar.
+
+**D4 (aprobada en ejecución):** página real **Empleados** (alta, rol, desactivar/reactivar, borrar sin historial) sobre los endpoints de la Fase 2. La lista indica el historial de cada persona para avisar antes de intentar borrar.
+
+**Pendiente:** prueba en iPhone; Lighthouse de Marcar con sesión real.

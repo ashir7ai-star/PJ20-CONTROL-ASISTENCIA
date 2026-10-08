@@ -1,6 +1,6 @@
 # Fase 2B — Staging en Easypanel (adelantado de la Fase 7) · Plan detallado
 
-> Estado: **aprobado** · en ejecución · 2026-10-08
+> Estado: ✅ **cerrada** · 2026-10-08
 > Reglas aplicables: `CLAUDE.md` §1 (Seguridad), §7 (Despliegue), §9 (Método)
 
 ## 1. Objetivo
@@ -46,11 +46,11 @@ Un proyecto `pj20-staging` con cinco servicios en la red interna de Easypanel:
 
 ## 6. Criterios de aceptación
 
-- [ ] `https://…/api/health` responde OK y Postgres, Redis y RustFS no son accesibles desde internet.
-- [ ] Desde tu celular (Android y, si es posible, iPhone): inicias sesión con Google, aceptas el consentimiento, llegas a Marcar, entras al panel y cierras sesión.
-- [ ] Cabeceras de seguridad (HSTS, CSP) presentes; la cookie de sesión es `Secure` y `HttpOnly`.
-- [ ] Lighthouse móvil sobre staging, con red real.
-- [ ] Cada push a `main` se puede redesplegar con un clic (o automáticamente).
+- [x] `https://…/api/health` responde OK y Postgres, Redis y RustFS no son accesibles desde internet.
+- [x] Desde tu celular (Android; iPhone pendiente): inicias sesión con Google, aceptas el consentimiento, llegas a Marcar, entras al panel y cierras sesión.
+- [x] Cabeceras de seguridad (HSTS, CSP) presentes; la cookie de sesión es `Secure` y `HttpOnly`.
+- [ ] Lighthouse móvil sobre staging, con red real. _(Pendiente para la Fase 7.)_
+- [x] Cada push a `main` se puede redesplegar con un clic (o automáticamente).
 
 ## 7. Riesgos y reversión
 

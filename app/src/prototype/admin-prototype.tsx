@@ -137,12 +137,17 @@ export function AdminPrototype() {
               employees={employees}
               me={me}
               recordCountById={recordCountById}
-              onAction={applyAction}
+              // In memory: the prototype never fails, it resolves at once.
+              onAction={(id, action) => {
+                applyAction(id, action);
+                return Promise.resolve();
+              }}
               onAdd={(e: { name: string; email: string; role: Role }) => {
                 setEmployees((current) => [
                   { id: crypto.randomUUID(), ...e, active: true, device: null },
                   ...current,
                 ]);
+                return Promise.resolve();
               }}
             />
           }

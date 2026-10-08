@@ -50,6 +50,8 @@ export const employeeSchema = z.object({
   role: roleSchema,
   active: z.boolean(),
   createdAt: z.iso.datetime(),
+  /** Consents + attendance records: anyone with history can only be deactivated. */
+  recordCount: z.number().int().min(0),
 });
 export type EmployeeDto = z.infer<typeof employeeSchema>;
 
