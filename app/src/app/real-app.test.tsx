@@ -18,6 +18,7 @@ const laura: Me = {
 type Handler = (body: unknown) => { status: number; json?: unknown };
 let routes: Record<string, Handler>;
 let calls: string[];
+let googleConfig: { ux_mode: string; login_uri: string; nonce: string } | undefined;
 
 function json(status: number, body?: unknown) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -61,20 +62,19 @@ beforeEach(() => {
     return Promise.resolve(json(status, payload));
   });
 
-  // Google Identity Services stub: renders a button that "returns" a credential.
-  let callback: ((r: { credential: string }) => void) | undefined;
+  // Google Identity Services stub. In redirect mode (D5) the button leaves the
+  // page for Google; the tests check how it was configured and then simulate
+  // the return (?acceso=… or an open session).
+  googleConfig = undefined;
   window.google = {
     accounts: {
       id: {
         initialize: (config) => {
-          callback = config.callback;
+          googleConfig = config;
         },
         renderButton: (parent) => {
           const button = document.createElement('button');
           button.textContent = 'Continuar con Google';
-          button.addEventListener('click', () =>
-            callback?.({ credential: 'credencial-de-google' }),
-          );
           parent.appendChild(button);
         },
       },
@@ -86,31 +86,37 @@ afterEach(() => {
   delete window.google;
 });
 
-function renderApp() {
+function renderApp(entry = '/') {
   const router = createMemoryRouter(
     [
       { path: '/', element: <RealApp /> },
       { path: '/admin', element: <p>Panel del administrador</p> },
     ],
-    { initialEntries: ['/'] },
+    { initialEntries: [entry] },
   );
   render(<RouterProvider router={router} />);
+  return router;
 }
 
 describe('app real: sesión → consentimiento → Marcar', () => {
-  it('sin sesión muestra el botón oficial de Google; al iniciar sesión pide el consentimiento y luego Marcar', async () => {
+  it('sin sesión muestra el botón oficial de Google en modo redirección (funciona en iPhone)', async () => {
+    renderApp();
+    expect(await screen.findByRole('button', { name: 'Continuar con Google' })).toBeInTheDocument();
+    expect(googleConfig).toMatchObject({
+      ux_mode: 'redirect',
+      login_uri: 'http://localhost:3000/api/v1/auth/google/redirect',
+      nonce: 'nonce-de-prueba-123456',
+    });
+  });
+
+  it('al volver de Google con sesión abierta pide el consentimiento y luego muestra Marcar', async () => {
     let consented = false;
-    routes['POST /api/v1/auth/google'] = (body) => {
-      expect(body).toEqual({ credential: 'credencial-de-google', nonce: 'nonce-de-prueba-123456' });
-      return { status: 200, json: { ...laura, consentRequired: true } };
-    };
+    routes['GET /api/v1/me'] = () => ({ status: 200, json: { ...laura, consentRequired: true } });
     routes['POST /api/v1/me/consent'] = () => {
       consented = true;
       return { status: 204 };
     };
     renderApp();
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Continuar con Google' }));
     expect(
       await screen.findByRole('heading', { name: 'Tus datos, con transparencia' }),
     ).toBeInTheDocument();
@@ -124,25 +130,14 @@ describe('app real: sesión → consentimiento → Marcar', () => {
     expect(screen.queryByRole('button', { name: /panel de administración/i })).toBeNull();
   });
 
-  it('una cuenta no autorizada ve el mensaje claro, sin sesión', async () => {
-    routes['POST /api/v1/auth/google'] = () => ({
-      status: 403,
-      json: { error: { code: 'ACCOUNT_NOT_AUTHORIZED', message: 'Tu cuenta no está autorizada.' } },
-    });
-    renderApp();
-    fireEvent.click(await screen.findByRole('button', { name: 'Continuar con Google' }));
+  it('una cuenta no autorizada ve el mensaje claro y la dirección queda limpia', async () => {
+    const router = renderApp('/?acceso=no-autorizada');
     expect(await screen.findByRole('alert')).toHaveTextContent('Tu cuenta no está autorizada');
+    expect(router.state.location.search).toBe('');
   });
 
   it('un error de verificación se explica sobre el botón', async () => {
-    routes['POST /api/v1/auth/google'] = () => ({
-      status: 401,
-      json: {
-        error: { code: 'INVALID_CREDENTIAL', message: 'No pudimos verificar tu cuenta de Google.' },
-      },
-    });
-    renderApp();
-    fireEvent.click(await screen.findByRole('button', { name: 'Continuar con Google' }));
+    renderApp('/?acceso=error');
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'No pudimos verificar tu cuenta de Google.',
     );

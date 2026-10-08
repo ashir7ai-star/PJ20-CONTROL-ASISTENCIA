@@ -13,7 +13,7 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildApp } from './app.js';
-import { SESSION_COOKIE } from './auth/plugin.js';
+import { NONCE_COOKIE, SESSION_COOKIE } from './auth/plugin.js';
 import { createGoogleVerifier } from './auth/google.js';
 import { createNonceStore } from './auth/nonce.js';
 import { createDatabase } from './db/client.js';
@@ -232,6 +232,101 @@ describe('inicio de sesión con Google', () => {
       payload: { credential: forged, nonce },
     });
     expect(res.statusCode).toBe(401);
+  });
+});
+
+describe('inicio de sesión por redirección (D5, iPhone)', () => {
+  const GOOGLE = 'https://accounts.google.com';
+
+  /** The browser gets a nonce (and its binding cookie) before going to Google. */
+  async function nonceWithCookie() {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/nonce',
+      headers: { origin: ORIGIN },
+    });
+    const cookie = res.cookies.find((c) => c.name === NONCE_COOKIE);
+    if (!cookie) throw new Error('sin cookie de nonce');
+    return { nonce: res.json<{ nonce: string }>().nonce, cookie };
+  }
+
+  function googlePost(credential: string, cookie?: string, origin = GOOGLE) {
+    return app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/google/redirect',
+      headers: {
+        origin,
+        'content-type': 'application/x-www-form-urlencoded',
+        ...(cookie ? { cookie } : {}),
+      },
+      payload: new URLSearchParams({ credential, g_csrf_token: 'x' }).toString(),
+    });
+  }
+
+  it('la cookie del nonce es HttpOnly, Secure, SameSite=None y vence en 5 minutos', async () => {
+    const { cookie } = await nonceWithCookie();
+    expect(cookie).toMatchObject({ httpOnly: true, secure: true, sameSite: 'None', path: '/' });
+    expect(cookie.maxAge).toBe(300);
+  });
+
+  it('Google redirige con la credencial: abre sesión y vuelve a la app', async () => {
+    const user = await addUser('employee');
+    const { nonce, cookie } = await nonceWithCookie();
+    const res = await googlePost(
+      await googleToken(user.email, nonce),
+      `${NONCE_COOKIE}=${cookie.value}`,
+    );
+    expect(res.statusCode).toBe(303);
+    expect(res.headers.location).toBe('/');
+    const me = await call('GET', '/me', sessionCookie(res));
+    expect(me.json()).toMatchObject({ id: user.id });
+    // The nonce cookie is cleared and the nonce cannot be reused.
+    expect(res.cookies.find((c) => c.name === NONCE_COOKIE)?.value).toBe('');
+    const replay = await googlePost(
+      await googleToken(user.email, nonce),
+      `${NONCE_COOKIE}=${cookie.value}`,
+    );
+    expect(replay.headers.location).toBe('/?acceso=error');
+  });
+
+  it('login CSRF: una credencial con el nonce de OTRO navegador se rechaza', async () => {
+    const attacker = await addUser('employee');
+    const attackerNonce = (await nonceWithCookie()).nonce;
+    const victim = await nonceWithCookie();
+    const res = await googlePost(
+      await googleToken(attacker.email, attackerNonce),
+      `${NONCE_COOKIE}=${victim.cookie.value}`,
+    );
+    expect(res.headers.location).toBe('/?acceso=error');
+    expect(res.cookies.find((c) => c.name === SESSION_COOKIE)).toBeUndefined();
+  });
+
+  it('sin la cookie del nonce no hay sesión', async () => {
+    const user = await addUser('employee');
+    const { nonce } = await nonceWithCookie();
+    const res = await googlePost(await googleToken(user.email, nonce));
+    expect(res.headers.location).toBe('/?acceso=error');
+  });
+
+  it('una cuenta no autorizada vuelve a la app con el aviso, sin sesión', async () => {
+    const { nonce, cookie } = await nonceWithCookie();
+    const res = await googlePost(
+      await googleToken(unique('extrano'), nonce),
+      `${NONCE_COOKIE}=${cookie.value}`,
+    );
+    expect(res.headers.location).toBe('/?acceso=no-autorizada');
+    expect(res.cookies.find((c) => c.name === SESSION_COOKIE)).toBeUndefined();
+  });
+
+  it('solo Google puede enviar a esta dirección: otro sitio recibe 403', async () => {
+    const user = await addUser('employee');
+    const { nonce, cookie } = await nonceWithCookie();
+    const res = await googlePost(
+      await googleToken(user.email, nonce),
+      `${NONCE_COOKIE}=${cookie.value}`,
+      'https://sitio-malicioso.com',
+    );
+    expect(res.statusCode).toBe(403);
   });
 });
 

@@ -1,12 +1,14 @@
 /**
- * Official Google Sign-In button (Google Identity Services). Google only
- * issues a signed ID token through its own button, which is also what its
- * branding guidelines require. Flow (decision D1):
- *   1. ask our server for a single-use nonce,
- *   2. Google signs it into the ID token,
- *   3. the server verifies the token and the nonce, then opens the session.
+ * Official Google Sign-In button (Google Identity Services), redirect mode
+ * (decision D5: the popup cannot report back on iPhone). Flow:
+ *   1. our server issues a single-use nonce and binds it to this browser
+ *      with an HttpOnly cookie,
+ *   2. the same tab goes to Google, which signs the nonce into the ID token,
+ *   3. Google posts the token to /api/v1/auth/google/redirect; the server
+ *      verifies token + nonce + cookie, opens the session and sends the
+ *      browser back to the app.
  */
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { NonceResponse } from '@pj20/shared';
 
@@ -18,10 +20,10 @@ interface GoogleIdApi {
   initialize(config: {
     client_id: string;
     nonce: string;
-    callback: (response: { credential: string }) => void;
-    ux_mode?: 'popup' | 'redirect';
+    ux_mode: 'redirect';
+    /** Must be listed in Google Cloud → Authorized redirect URIs. */
+    login_uri: string;
     context?: 'signin' | 'signup' | 'use';
-    use_fedcm_for_prompt?: boolean;
   }): void;
   renderButton(
     parent: HTMLElement,
@@ -72,7 +74,6 @@ function loadGoogleScript(): Promise<GoogleIdApi> {
 
 interface GoogleButtonProps {
   clientId: string;
-  onCredential: (credential: string, nonce: string) => void;
 }
 
 /**
@@ -80,13 +81,11 @@ interface GoogleButtonProps {
  * If either fails (no internet, server down) it says so and offers a manual
  * retry: never an automatic loop that would hammer the server.
  */
-export function GoogleButton({ clientId, onCredential }: GoogleButtonProps) {
+export function GoogleButton({ clientId }: GoogleButtonProps) {
   const container = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [attempt, setAttempt] = useState(0);
   const theme = resolveTheme(useThemePreference());
-  // Always the latest callback, without re-running the effect when it changes.
-  const handleCredential = useEffectEvent(onCredential);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,12 +102,9 @@ export function GoogleButton({ clientId, onCredential }: GoogleButtonProps) {
         google.initialize({
           client_id: clientId,
           nonce,
-          ux_mode: 'popup',
+          ux_mode: 'redirect',
+          login_uri: new URL('/api/v1/auth/google/redirect', window.location.origin).href,
           context: 'signin',
-          use_fedcm_for_prompt: true,
-          callback: ({ credential }) => {
-            handleCredential(credential, nonce);
-          },
         });
         element.replaceChildren();
         google.renderButton(element, {

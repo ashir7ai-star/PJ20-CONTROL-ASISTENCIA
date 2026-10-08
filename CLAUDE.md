@@ -72,7 +72,7 @@ Esta aplicación se construye al nivel de las mejores empresas de tecnología de
 2. **Login solo con Google.** El backend verifica el ID token de Google (firma, `aud`, `iss`, `exp`, `email_verified`). No existen contraseñas propias.
 3. **Lista blanca.** Solo entran correos registrados y activos en la tabla de empleados. Un correo de Google válido pero no registrado es rechazado.
 4. **Sesiones seguras del lado del servidor** (decisión D2, Fase 2): token aleatorio de 256 bits en cookie `httpOnly`, `Secure`, `SameSite=Strict`; en la BD solo se guarda su hash. Empleado: 30 días con renovación por uso; administrador: 12 horas sin renovación. Cerrar sesión o desactivar a un empleado la invalida **al instante**. (En el APK, el mismo token viaja en `Authorization` y se guarda en el almacén seguro de Android.)
-   - **Inicio de sesión (D1):** ID token de Google verificado en el servidor con _nonce_ de un solo uso; no se usa ni se guarda el _client secret_.
+   - **Inicio de sesión (D1):** ID token de Google verificado en el servidor con _nonce_ de un solo uso, atado al navegador por cookie; botón de Google en modo redirección para que funcione en iPhone (decisión 0005). No se usa ni se guarda el _client secret_.
 5. **Autorización en el backend, siempre.** Roles: `employee`, `admin`. Todo endpoint verifica rol y propiedad del dato. Denegar por defecto. Que el frontend oculte botones no es seguridad.
    - **Empleado:** al iniciar sesión solo ve la pantalla de **marcar** (entrada/salida con selfie y ubicación).
    - **Administrador:** ve la pantalla de marcar **y** el panel administrativo completo (asistencias, mapa, selfies, alertas de fraude, empleados, reportes).

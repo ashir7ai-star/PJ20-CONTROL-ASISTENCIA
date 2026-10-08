@@ -20,6 +20,37 @@ declare module 'fastify' {
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+/**
+ * Binds the sign-in nonce to THIS browser (decision D5). Google's redirect is a
+ * cross-site form POST, which only carries SameSite=None cookies; HttpOnly and
+ * 5 minutes like the nonce itself. Without it, an attacker could make a victim
+ * sign in with the attacker's account (login CSRF).
+ */
+export const NONCE_COOKIE = '__Host-pj20_nonce';
+const NONCE_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  path: '/',
+} as const;
+
+export function setNonceCookie(reply: FastifyReply, nonce: string): void {
+  void reply.setCookie(NONCE_COOKIE, nonce, { ...NONCE_COOKIE_OPTIONS, maxAge: 300 });
+}
+
+export function clearNonceCookie(reply: FastifyReply): void {
+  void reply.clearCookie(NONCE_COOKIE, NONCE_COOKIE_OPTIONS);
+}
+
+/**
+ * Per-route exception to the Origin check: only Google's sign-in redirect uses
+ * it. Safari may send "null" for that cross-site POST; the nonce cookie above
+ * is what actually ties the request to this browser.
+ */
+export interface CrossSiteConfig {
+  crossSiteOrigins?: readonly string[];
+}
+
 export function setSessionCookie(reply: FastifyReply, token: string, expiresAt: Date): void {
   void reply.setCookie(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -63,7 +94,10 @@ export const authPlugin = fp<AuthPluginOptions>(
       // CSRF: state-changing requests must come from our own app.
       if (!SAFE_METHODS.has(request.method)) {
         const origin = request.headers.origin;
-        if (!origin || !allowedOrigins.includes(origin)) throw errors.originNotAllowed();
+        const extra = (request.routeOptions.config as CrossSiteConfig).crossSiteOrigins ?? [];
+        if (!origin || !(allowedOrigins.includes(origin) || extra.includes(origin))) {
+          throw errors.originNotAllowed();
+        }
       }
 
       const token = request.cookies[SESSION_COOKIE];

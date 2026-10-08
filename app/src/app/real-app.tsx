@@ -4,8 +4,8 @@
  */
 import type { Me } from '@pj20/shared';
 import { CONSENT_VERSION } from '@pj20/shared/constants';
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 
 import { api, ApiRequestError } from '../api/client.js';
 import { GoogleButton } from '../auth/google-button.js';
@@ -26,7 +26,6 @@ const ConsentScreen = lazy(() =>
 type State =
   | { kind: 'loading' }
   | { kind: 'signed-out'; error: string | null }
-  | { kind: 'verifying' }
   | { kind: 'not-authorized' }
   | { kind: 'offline' }
   | { kind: 'signed-in'; me: Me };
@@ -43,10 +42,25 @@ async function readSession(): Promise<State> {
   }
 }
 
+/** Outcome of Google's redirect, as reported by the server. */
+function stateForAccessIssue(issue: string): State {
+  return issue === 'no-autorizada'
+    ? { kind: 'not-authorized' }
+    : { kind: 'signed-out', error: 'No pudimos verificar tu cuenta de Google. Intenta de nuevo.' };
+}
+
 export function RealApp() {
   const [state, setState] = useState<State>({ kind: 'loading' });
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
   const navigate = useNavigate();
+
+  // Back from Google (redirect mode, D5): the server says how it went in ?acceso=.
+  // Read once, applied to the first session check, then removed from the address.
+  const [params, setParams] = useSearchParams();
+  const accessIssue = useRef(params.get('acceso'));
+  useEffect(() => {
+    if (params.has('acceso')) setParams({}, { replace: true });
+  }, [params, setParams]);
 
   // Incrementing this re-reads the session (on start, after consent, on retry).
   const [sessionCheck, setSessionCheck] = useState(0);
@@ -58,7 +72,10 @@ export function RealApp() {
     let cancelled = false;
     readSession().then(
       (next) => {
-        if (!cancelled) setState(next);
+        if (cancelled) return;
+        const issue = accessIssue.current;
+        accessIssue.current = null;
+        setState(next.kind === 'signed-out' && issue ? stateForAccessIssue(issue) : next);
       },
       () => undefined,
     );
@@ -66,26 +83,6 @@ export function RealApp() {
       cancelled = true;
     };
   }, [sessionCheck]);
-
-  const onCredential = useCallback(async (credential: string, nonce: string) => {
-    setState({ kind: 'verifying' });
-    try {
-      const me = await api<Me>('/auth/google', {
-        method: 'POST',
-        body: { credential, nonce },
-      });
-      setState({ kind: 'signed-in', me });
-    } catch (error) {
-      if (error instanceof ApiRequestError && error.code === 'ACCOUNT_NOT_AUTHORIZED') {
-        setState({ kind: 'not-authorized' });
-      } else {
-        setState({
-          kind: 'signed-out',
-          error: error instanceof ApiRequestError ? error.message : 'No pudimos iniciar sesión.',
-        });
-      }
-    }
-  }, []);
 
   const onSessionExpired = useCallback(() => {
     setState({ kind: 'signed-out', error: 'Tu sesión terminó. Inicia sesión de nuevo.' });
@@ -111,14 +108,12 @@ export function RealApp() {
         />
       );
     case 'signed-out':
-    case 'verifying':
       return (
         <LoginScreen
-          verifying={state.kind === 'verifying'}
-          error={state.kind === 'signed-out' ? state.error : null}
+          error={state.error}
           googleButton={
             clientId ? (
-              <GoogleButton clientId={clientId} onCredential={(c, n) => void onCredential(c, n)} />
+              <GoogleButton clientId={clientId} />
             ) : (
               <p role="alert" className="text-center text-[14px] text-danger">
                 Falta configurar VITE_GOOGLE_CLIENT_ID.
