@@ -17,6 +17,8 @@ import { SESSION_COOKIE } from './auth/plugin.js';
 import { createGoogleVerifier } from './auth/google.js';
 import { createNonceStore } from './auth/nonce.js';
 import { createDatabase } from './db/client.js';
+import { createPhotoStore, type PhotoStore } from './infra/photo-store.js';
+import { createStorageClient, ensureBucket } from './infra/storage.js';
 import { employees } from './db/schema.js';
 import { loadLocalEnv, TEST_DB, withDatabase } from './test/integration-setup.js';
 
@@ -31,6 +33,9 @@ let redis: Redis;
 let keys: Awaited<ReturnType<typeof generateKeyPair>>;
 let app: FastifyInstance;
 let db: ReturnType<typeof createDatabase>;
+let photos: PhotoStore;
+/** Separate bucket so tests never touch development selfies. */
+const TEST_BUCKET = 'pj20-test';
 
 async function makeApp(authRateLimitMax = 1000) {
   const instance = await buildApp({
@@ -47,6 +52,7 @@ async function makeApp(authRateLimitMax = 1000) {
         }),
       ),
       nonces: createNonceStore(redis),
+      photos,
       authRateLimitMax,
     },
   });
@@ -61,6 +67,14 @@ beforeAll(async () => {
   redis = new Redis(process.env.REDIS_URL ?? '', { db: 15 });
   await redis.flushdb();
   keys = await generateKeyPair('RS256');
+  const storage = createStorageClient({
+    endpoint: process.env.S3_ENDPOINT ?? '',
+    region: process.env.S3_REGION ?? 'us-east-1',
+    accessKey: process.env.S3_ACCESS_KEY ?? '',
+    secretKey: process.env.S3_SECRET_KEY ?? '',
+  });
+  await ensureBucket(storage, TEST_BUCKET);
+  photos = createPhotoStore(storage, TEST_BUCKET);
   app = await makeApp();
 });
 
@@ -412,6 +426,171 @@ describe('administración de usuarios', () => {
       /permission denied/,
     );
     await expect(pool.query('DELETE FROM audit_log')).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe('marcaciones (Fase 3)', () => {
+  /** Smallest structurally valid JPEG for the server checks (SOI … EOI). */
+  const selfie = (() => {
+    const bytes = new Uint8Array(4096);
+    bytes.set([0xff, 0xd8, 0xff, 0xe0]);
+    bytes.set([0xff, 0xd9], bytes.length - 2);
+    return Buffer.from(bytes).toString('base64');
+  })();
+
+  const markBody = (
+    kind: 'check_in' | 'check_out',
+    over: { accuracyM?: number; fixAgeS?: number; photo?: string } = {},
+  ) => {
+    const now = Date.now();
+    return {
+      kind,
+      location: {
+        latitude: 3.4516,
+        longitude: -76.532,
+        accuracyM: over.accuracyM ?? 8,
+        capturedAt: new Date(now - (over.fixAgeS ?? 2) * 1000).toISOString(),
+      },
+      deviceTime: new Date(now).toISOString(),
+      photo: over.photo ?? selfie,
+    };
+  };
+
+  async function readyEmployee() {
+    const session = await loggedIn('employee');
+    const consent = await call('POST', '/me/consent', session.cookie, {
+      version: CONSENT_VERSION,
+    });
+    expect(consent.statusCode).toBe(204);
+    return session;
+  }
+
+  it('marca entrada y salida con hora del servidor; el estado refleja el turno', async () => {
+    const { cookie } = await readyEmployee();
+    expect((await call('GET', '/attendance/status', cookie)).json()).toEqual({
+      onDutySince: null,
+      lastRecord: null,
+    });
+
+    const before = Date.now();
+    const checkIn = await call('POST', '/attendance', cookie, markBody('check_in'));
+    expect(checkIn.statusCode).toBe(201);
+    const record = checkIn.json<{ serverTime: string; reviewStatus: string }>();
+    expect(Date.parse(record.serverTime)).toBeGreaterThanOrEqual(before - 1000);
+    expect(record.reviewStatus).toBe('ok');
+
+    const onDuty: unknown = (await call('GET', '/attendance/status', cookie)).json();
+    expect(onDuty).toEqual({
+      onDutySince: record.serverTime,
+      lastRecord: { kind: 'check_in', at: record.serverTime },
+    });
+
+    const checkOut = await call('POST', '/attendance', cookie, markBody('check_out'));
+    expect(checkOut.statusCode).toBe(201);
+    expect(
+      (await call('GET', '/attendance/status', cookie)).json<{ onDutySince: unknown }>()
+        .onDutySince,
+    ).toBeNull();
+  });
+
+  it('rechaza entrada sobre entrada y salida sin entrada, aunque lleguen al mismo tiempo', async () => {
+    const { cookie } = await readyEmployee();
+    const noEntry = await call('POST', '/attendance', cookie, markBody('check_out'));
+    expect(noEntry.statusCode).toBe(422);
+
+    // Two taps at the same instant: the row lock lets exactly one through.
+    const results = await Promise.all([
+      call('POST', '/attendance', cookie, markBody('check_in')),
+      call('POST', '/attendance', cookie, markBody('check_in')),
+    ]);
+    expect(results.map((r) => r.statusCode).sort()).toEqual([201, 422]);
+  });
+
+  it('sin consentimiento no se puede marcar (Ley 1581), aunque se llame a la API directamente', async () => {
+    const { cookie } = await loggedIn('employee');
+    const res = await call('POST', '/attendance', cookie, markBody('check_in'));
+    expect(res.statusCode).toBe(422);
+    expect(res.json<{ error: { message: string } }>().error.message).toMatch(/aceptar/);
+  });
+
+  it('precisión baja o ubicación vieja: se acepta pero queda para revisión', async () => {
+    const { cookie } = await readyEmployee();
+    const res = await call(
+      'POST',
+      '/attendance',
+      cookie,
+      markBody('check_in', { accuracyM: 250, fixAgeS: 90 }),
+    );
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({
+      reviewStatus: 'pending',
+      reviewReasons: ['low_accuracy', 'stale_location'],
+    });
+  });
+
+  it('rechaza una foto que no es JPEG y no deja nada guardado', async () => {
+    const { cookie } = await readyEmployee();
+    const png = Buffer.alloc(4096, 1);
+    png.set([0x89, 0x50, 0x4e, 0x47]);
+    const res = await call(
+      'POST',
+      '/attendance',
+      cookie,
+      markBody('check_in', { photo: png.toString('base64') }),
+    );
+    expect(res.statusCode).toBe(400);
+    expect(
+      (await call('GET', '/attendance/status', cookie)).json<{ lastRecord: unknown }>().lastRecord,
+    ).toBeNull();
+  });
+
+  it('sin sesión no se marca ni se consulta el estado', async () => {
+    expect((await call('POST', '/attendance', undefined, markBody('check_in'))).statusCode).toBe(
+      401,
+    );
+    expect((await call('GET', '/attendance/status')).statusCode).toBe(401);
+  });
+
+  it('el administrador ve las marcaciones del día y la selfie; un empleado no', async () => {
+    const employee = await readyEmployee();
+    const marked = await call('POST', '/attendance', employee.cookie, markBody('check_in'));
+    const { id } = marked.json<{ id: string }>();
+
+    const forbidden = [
+      await call('GET', '/admin/attendance', employee.cookie),
+      await call('GET', `/admin/attendance/${id}/selfie`, employee.cookie),
+    ];
+    expect(forbidden.map((r) => r.statusCode)).toEqual([403, 403]);
+    expect((await call('GET', `/admin/attendance/${id}/selfie`)).statusCode).toBe(401);
+
+    const admin = await loggedIn('admin');
+    const list = await call('GET', '/admin/attendance', admin.cookie);
+    expect(list.statusCode).toBe(200);
+    const entry = list.json<{ id: string; employee: { id: string } }[]>().find((e) => e.id === id);
+    expect(entry?.employee.id).toBe(employee.user.id);
+
+    const photo = await call('GET', `/admin/attendance/${id}/selfie`, admin.cookie);
+    expect(photo.statusCode).toBe(200);
+    expect(photo.headers['content-type']).toBe('image/jpeg');
+    expect(photo.headers['cache-control']).toBe('private, no-store');
+    expect(photo.rawPayload.equals(Buffer.from(selfie, 'base64'))).toBe(true);
+  });
+
+  it('las marcaciones son inmutables: la API no puede editarlas ni borrarlas', async () => {
+    const { cookie } = await readyEmployee();
+    await call('POST', '/attendance', cookie, markBody('check_in'));
+    await expect(pool.query("UPDATE attendance_records SET kind = 'check_out'")).rejects.toThrow(
+      /permission denied/,
+    );
+    await expect(pool.query('DELETE FROM attendance_records')).rejects.toThrow(/permission denied/);
+  });
+
+  it('un empleado con marcaciones no se puede borrar: solo desactivar', async () => {
+    const employee = await readyEmployee();
+    await call('POST', '/attendance', employee.cookie, markBody('check_in'));
+    const admin = await loggedIn('admin');
+    const res = await call('DELETE', `/admin/employees/${employee.user.id}`, admin.cookie);
+    expect(res.statusCode).toBe(422);
   });
 });
 

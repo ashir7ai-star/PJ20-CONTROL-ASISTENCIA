@@ -15,6 +15,20 @@
       "when": 1791382683456,
       "tag": "0001_seguridad",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791489151783,
+      "tag": "0002_marcaciones",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791489154805,
+      "tag": "0003_marcaciones_seguridad",
+      "breakpoints": true
     }
   ]
 }

@@ -3,11 +3,16 @@
  * zod, documented in OpenAPI) and its access level: public, session or admin.
  */
 import {
+  adminAttendanceEntrySchema,
+  attendanceStatusSchema,
   auditEntrySchema,
+  businessDateSchema,
   consentRequestSchema,
   createEmployeeSchema,
   employeeSchema,
   googleLoginRequestSchema,
+  markRequestSchema,
+  markResponseSchema,
   meSchema,
   nonceResponseSchema,
   updateEmployeeSchema,
@@ -24,7 +29,10 @@ import {
 } from '../auth/plugin.js';
 import { acceptConsent, type AuthDeps, currentUser, signInWithGoogle } from '../auth/service.js';
 import { revokeSession } from '../auth/sessions.js';
+import { attendanceStatus, listDay, markAttendance, readSelfie } from '../attendance/service.js';
+import { businessToday } from '../attendance/rules.js';
 import { auditLog } from '../db/schema.js';
+import type { PhotoStore } from '../infra/photo-store.js';
 import {
   createEmployee,
   deleteEmployee,
@@ -35,6 +43,7 @@ import {
 const idParams = z.object({ id: z.uuid() });
 
 export interface V1Options extends AuthDeps {
+  photos: PhotoStore;
   /** Sign-in attempts per minute per IP (brute-force protection, CLAUDE.md §1.9). */
   authRateLimitMax?: number;
 }
@@ -96,6 +105,36 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
     },
   );
 
+  // ── Attendance (Fase 3) ─────────────────────────────────────────────────
+  app.get(
+    '/attendance/status',
+    { schema: { tags: ['attendance'], response: { 200: attendanceStatusSchema } } },
+    async (request) => attendanceStatus(db, requireSession(request).employee.id),
+  );
+
+  app.post(
+    '/attendance',
+    {
+      // The selfie travels as base64 in the JSON body (~1.4× the JPEG size).
+      bodyLimit: 3_500_000,
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      schema: {
+        tags: ['attendance'],
+        body: markRequestSchema,
+        response: { 201: markResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const session = requireSession(request);
+      const { ip, userAgent } = meta(request);
+      const record = await markAttendance(db, deps.photos, session.employee.id, request.body, {
+        ip,
+        userAgent,
+      });
+      return reply.code(201).send(record);
+    },
+  );
+
   // ── Admin ───────────────────────────────────────────────────────────────
   const adminContext = (request: Parameters<typeof requireAdmin>[0]) => {
     const session = requireAdmin(request);
@@ -146,6 +185,35 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
       const { me, audit } = adminContext(request);
       await deleteEmployee(db, request.params.id, me, audit);
       return reply.code(204).send();
+    },
+  );
+
+  app.get(
+    '/admin/attendance',
+    {
+      schema: {
+        tags: ['admin'],
+        querystring: z.object({ date: businessDateSchema.optional() }),
+        response: { 200: z.array(adminAttendanceEntrySchema) },
+      },
+    },
+    async (request) => {
+      requireAdmin(request);
+      return listDay(db, request.query.date ?? businessToday(new Date()));
+    },
+  );
+
+  app.get(
+    '/admin/attendance/:id/selfie',
+    { schema: { tags: ['admin'], params: idParams } },
+    async (request, reply) => {
+      requireAdmin(request);
+      const jpeg = await readSelfie(db, deps.photos, request.params.id);
+      // Sensitive personal data (Ley 1581): never cached by browsers or proxies.
+      return reply
+        .type('image/jpeg')
+        .header('cache-control', 'private, no-store')
+        .send(Buffer.from(jpeg));
     },
   );
 

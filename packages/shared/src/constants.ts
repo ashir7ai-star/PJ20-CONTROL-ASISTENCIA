@@ -22,3 +22,14 @@ export const apiErrorCodes = [
   'INTERNAL_ERROR',
 ] as const;
 export type ApiErrorCode = (typeof apiErrorCodes)[number];
+
+// ── Attendance (CLAUDE.md §2) ──────────────────────────────────────────────
+
+/** GPS accuracy above this (metres) is accepted but flagged for review (§2.6). */
+export const WEAK_ACCURACY_M = 100;
+/** A GPS fix older than this when marking is flagged for review (§2B.5). */
+export const MAX_FIX_AGE_S = 30;
+/** Largest accepted selfie (JPEG bytes). The app sends ~150–400 KB. */
+export const MAX_SELFIE_BYTES = 2 * 1024 * 1024;
+/** Business time zone (no daylight saving: always UTC−5). */
+export const BUSINESS_TIME_ZONE = 'America/Bogota';
