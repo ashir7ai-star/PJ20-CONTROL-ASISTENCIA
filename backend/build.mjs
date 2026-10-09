@@ -15,6 +15,7 @@ await build({
     migrate: 'src/db/migrate.ts',
     'db-usuario-app': 'src/db/setup-app-user.ts',
     'admin-crear': 'src/cli/create-admin.ts',
+    'reiniciar-datos': 'src/cli/reset-data.ts',
   },
   outdir: 'dist',
   bundle: true,

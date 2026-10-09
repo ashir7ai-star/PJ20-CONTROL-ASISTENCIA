@@ -118,3 +118,19 @@ Google Auth Platform → Clients → `PJ20 Control de Asistencia Web` → **Auth
 ## 9. Redesplegar
 
 Cada cambio fusionado en `main` se publica con **Deploy** en `pj20-asistencia-api` y `pj20-asistencia-app` (o activando **Auto Deploy**). Si hay migraciones nuevas, repetir solo `node dist/migrate.js` (paso 6).
+
+## 10. Empezar de cero (borrar todos los registros)
+
+Para pasar de pruebas a uso real. Borra **todo**: empleados, marcaciones, selfies, consentimientos, solicitudes, sesiones y auditoría. Las marcaciones son inmutables (ni el dueño puede borrar filas), por eso el comando elimina el esquema completo y lo recrea. Requiere dos llaves:
+
+1. En `pj20-asistencia-api` → **Environment**, agrega `PERMITIR_REINICIO_DATOS=si` → **Save** y **Deploy**.
+2. Consola **`>_`** → **Sh**:
+   ```sh
+   node dist/reiniciar-datos.js BORRAR-TODO-pj20
+   node dist/migrate.js
+   node dist/db-usuario-app.js
+   node dist/admin-crear.js nathan@ylevigroup.com "Nathan"
+   ```
+3. **Quita** `PERMITIR_REINICIO_DATOS` de Environment → **Save** y **Deploy**. Sin esa variable el comando queda bloqueado.
+
+**Después de esto, nunca más.** Con registros reales, el reinicio destruiría pruebas laborales que la ley obliga a conservar.
