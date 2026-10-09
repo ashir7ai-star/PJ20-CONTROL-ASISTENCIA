@@ -34,7 +34,7 @@
 - **Reclamos:** 15 días hábiles, prorrogables 8 (art. 15).
 - **Revocar la selfie:** el propio empleado, desde «Autorización de selfie» en la app.
 
-## 4. Pendiente de la empresa
+## 4. Obligaciones de la empresa
 
-- **Registro Nacional de Bases de Datos:** solo es obligatorio si los activos totales superan 100.000 UVT (Decreto 090 de 2018). Confirmar con los estados financieros.
+- **Registro Nacional de Bases de Datos: no aplica.** Solo es obligatorio cuando los activos totales superan 100.000 UVT (Decreto 090 de 2018), y la empresa confirmó el 2026-10-09 que no los supera. Revisarlo si los activos crecen por encima de ese umbral.
 - **Revisión por un abogado** de la política y de este documento cuando sea posible.
