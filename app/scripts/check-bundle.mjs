@@ -2,7 +2,7 @@
 // every chunk it imports statically (CLAUDE.md §1.5, B.12). Run after `vite build`.
 //  · admin-panel code must never be there;
 //  · neither may zod: the server already validates every response.
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 
 const dist = new URL('../dist/', import.meta.url);
 const html = await readFile(new URL('index.html', dist), 'utf8');
@@ -48,3 +48,21 @@ if (failed) process.exit(1);
 process.stdout.write(
   `✓ Carga inicial (${initial.size} archivos) sin panel de administración ni zod\n`,
 );
+
+// The real app (not the GitHub Pages demo) must not contain ANY fictional data
+// or prototype screen, in any file — not even in lazily loaded chunks.
+if (process.env.VITE_MODO !== 'prototipo') {
+  const fictional = ['Andrés Rodríguez', 'Sebastián Torres', 'Prototipo · Fase 1'];
+  const assets = (await readdir(new URL('assets/', dist))).filter((f) => f.endsWith('.js'));
+  for (const file of assets) {
+    const code = await readFile(new URL(`assets/${file}`, dist), 'utf8');
+    for (const marker of fictional) {
+      if (code.includes(marker)) {
+        process.stderr.write(`✗ La app real (${file}) contiene datos de ejemplo: "${marker}"\n`);
+        failed = true;
+      }
+    }
+  }
+  if (failed) process.exit(1);
+  process.stdout.write(`✓ La app real no contiene datos de ejemplo (${assets.length} archivos)\n`);
+}

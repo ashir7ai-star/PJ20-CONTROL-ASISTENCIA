@@ -2,12 +2,12 @@
  * "Marcaciones de hoy" — the first real admin page (Fase 3, decision D3).
  * Real records of one Bogotá day: who, entry/exit, server time, accuracy,
  * map link and the selfie (served by the API to admin sessions only,
- * decision 0004). The rest of the panel stays a prototype until Fase 6.
+ * decision 0004).
  */
 import type { AdminAttendanceEntry, ReviewReason } from '@pj20/shared';
-import { ChevronLeft, ChevronRight, LayoutDashboard, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 
 import { api, ApiRequestError } from '../../api/client.js';
 import { Avatar } from '../../components/ui/avatar.js';
@@ -152,14 +152,6 @@ function TodayContent() {
         }}
         onOpenSelfie={setSelfie}
       />
-
-      <Link
-        to="/prototipo/admin"
-        className="mt-10 flex items-center justify-center gap-2 text-[14px] font-medium text-info hover:underline"
-      >
-        <LayoutDashboard className="size-4" aria-hidden="true" />
-        Ver el panel completo (prototipo con datos de ejemplo)
-      </Link>
 
       <Sheet
         open={selfie !== null}
