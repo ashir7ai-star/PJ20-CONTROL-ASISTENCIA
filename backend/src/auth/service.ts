@@ -12,6 +12,7 @@ import { consents, employees } from '../db/schema.js';
 import { errors } from '../errors.js';
 import type { GoogleVerifier } from './google.js';
 import type { NonceStore } from './nonce.js';
+import { recordSelfieDecision, selfieAuthorized } from './selfie.js';
 import { createSession, type SessionContext } from './sessions.js';
 
 export interface AuthDeps {
@@ -82,15 +83,24 @@ export async function currentUser(
     email: employee.email,
     role: employee.role,
     consentRequired: !accepted,
+    selfieAuthorized: await selfieAuthorized(db, employee.id),
   };
 }
 
+/**
+ * Accepts the consent and records, separately, the selfie decision (D7).
+ * Idempotent for the consent; the selfie decision is recorded if it changed.
+ */
 export async function acceptConsent(
   db: Database,
   session: SessionContext,
+  selfie: boolean,
   meta: RequestMeta,
 ): Promise<void> {
   await db.transaction(async (tx) => {
+    const context = { actor: session.employee, requestId: meta.requestId, ip: meta.ip };
+    await recordSelfieDecision(tx, session.employee.id, selfie, meta, context);
+
     const [already] = await tx
       .select({ id: consents.id })
       .from(consents)
@@ -106,15 +116,28 @@ export async function acceptConsent(
       ip: meta.ip ?? null,
       userAgent: meta.userAgent?.slice(0, 512) ?? null,
     });
-    await audit(
-      tx,
-      { actor: session.employee, requestId: meta.requestId, ip: meta.ip },
-      {
-        action: 'consent.accepted',
-        targetType: 'employee',
-        targetId: session.employee.id,
-        after: { version: CONSENT_VERSION },
-      },
-    );
+    await audit(tx, context, {
+      action: 'consent.accepted',
+      targetType: 'employee',
+      targetId: session.employee.id,
+      after: { version: CONSENT_VERSION },
+    });
   });
+}
+
+/** Grant or revoke the selfie authorization at any time (D7). */
+export async function setSelfieAuthorization(
+  db: Database,
+  session: SessionContext,
+  authorized: boolean,
+  meta: RequestMeta,
+): Promise<Me> {
+  await db.transaction(async (tx) => {
+    await recordSelfieDecision(tx, session.employee.id, authorized, meta, {
+      actor: session.employee,
+      requestId: meta.requestId,
+      ip: meta.ip,
+    });
+  });
+  return currentUser(db, session);
 }

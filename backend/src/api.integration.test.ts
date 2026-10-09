@@ -17,6 +17,8 @@ import { ACCESS_PROOF_COOKIE, NONCE_COOKIE, SESSION_COOKIE } from './auth/plugin
 import { createGoogleVerifier } from './auth/google.js';
 import { createNonceStore } from './auth/nonce.js';
 import { createAccessProofStore } from './access/proof.js';
+import { purgeExpiredSelfies } from './attendance/retention.js';
+import { selfieKey } from './attendance/rules.js';
 import { createDatabase } from './db/client.js';
 import { createPhotoStore, type PhotoStore } from './infra/photo-store.js';
 import { createStorageClient, ensureBucket } from './infra/storage.js';
@@ -145,7 +147,7 @@ async function loggedIn(role: 'employee' | 'admin') {
 }
 
 function call(
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   url: string,
   cookie?: string,
   payload?: object,
@@ -510,10 +512,12 @@ describe('consentimiento (Ley 1581)', () => {
     const { user, cookie } = await loggedIn('employee');
     expect((await call('GET', '/me', cookie)).json()).toMatchObject({ consentRequired: true });
     expect(
-      (await call('POST', '/me/consent', cookie, { version: CONSENT_VERSION })).statusCode,
+      (await call('POST', '/me/consent', cookie, { version: CONSENT_VERSION, selfie: true }))
+        .statusCode,
     ).toBe(204);
     expect(
-      (await call('POST', '/me/consent', cookie, { version: CONSENT_VERSION })).statusCode,
+      (await call('POST', '/me/consent', cookie, { version: CONSENT_VERSION, selfie: true }))
+        .statusCode,
     ).toBe(204);
     expect((await call('GET', '/me', cookie)).json()).toMatchObject({ consentRequired: false });
 
@@ -596,7 +600,7 @@ describe('administración de usuarios', () => {
   it('no elimina a quien ya aceptó el consentimiento; sí a quien nunca usó la app', async () => {
     const admin = await loggedIn('admin');
     const used = await loggedIn('employee');
-    await call('POST', '/me/consent', used.cookie, { version: CONSENT_VERSION });
+    await call('POST', '/me/consent', used.cookie, { version: CONSENT_VERSION, selfie: true });
     const blocked = await call('DELETE', `/admin/employees/${used.user.id}`, admin.cookie);
     expect(blocked.statusCode).toBe(422);
 
@@ -648,7 +652,8 @@ describe('marcaciones (Fase 3)', () => {
 
   const markBody = (
     kind: 'check_in' | 'check_out',
-    over: { accuracyM?: number; fixAgeS?: number; photo?: string } = {},
+    /** photo: null = marking without selfie (D7). */
+    over: { accuracyM?: number; fixAgeS?: number; photo?: string | null } = {},
   ) => {
     const now = Date.now();
     return {
@@ -660,14 +665,15 @@ describe('marcaciones (Fase 3)', () => {
         capturedAt: new Date(now - (over.fixAgeS ?? 2) * 1000).toISOString(),
       },
       deviceTime: new Date(now).toISOString(),
-      photo: over.photo ?? selfie,
+      ...(over.photo === null ? {} : { photo: over.photo ?? selfie }),
     };
   };
 
-  async function readyEmployee() {
+  async function readyEmployee(selfie = true) {
     const session = await loggedIn('employee');
     const consent = await call('POST', '/me/consent', session.cookie, {
       version: CONSENT_VERSION,
+      selfie,
     });
     expect(consent.statusCode).toBe(204);
     return session;
@@ -827,6 +833,88 @@ describe('marcaciones (Fase 3)', () => {
       .json<{ id: string; recordCount: number }[]>()
       .find((e) => e.id === employee.user.id);
     expect(row?.recordCount).toBe(2);
+  });
+
+  describe('selfie opcional (D7)', () => {
+    it('quien no autoriza la selfie marca sin foto; mandarla igual se rechaza', async () => {
+      const { cookie } = await readyEmployee(false);
+      expect((await call('GET', '/me', cookie)).json()).toMatchObject({ selfieAuthorized: false });
+      const withPhoto = await call('POST', '/attendance', cookie, markBody('check_in'));
+      expect(withPhoto.statusCode).toBe(422);
+      const res = await call('POST', '/attendance', cookie, markBody('check_in', { photo: null }));
+      expect(res.statusCode).toBe(201);
+      expect(res.json()).toMatchObject({ withSelfie: false });
+    });
+
+    it('quien autorizó debe enviar la selfie', async () => {
+      const { cookie } = await readyEmployee(true);
+      const res = await call('POST', '/attendance', cookie, markBody('check_in', { photo: null }));
+      expect(res.statusCode).toBe(422);
+    });
+
+    it('puede cambiar de opinión cuando quiera; cada decisión queda como prueba inmutable', async () => {
+      const { user, cookie } = await readyEmployee(true);
+      const revoked = await call('PUT', '/me/selfie-authorization', cookie, { authorized: false });
+      expect(revoked.json()).toMatchObject({ selfieAuthorized: false });
+      const again = await call('PUT', '/me/selfie-authorization', cookie, { authorized: true });
+      expect(again.json()).toMatchObject({ selfieAuthorized: true });
+
+      const { rows } = await pool.query<{ authorized: boolean }>(
+        'SELECT authorized FROM selfie_authorizations WHERE employee_id = $1 ORDER BY decided_at',
+        [user.id],
+      );
+      expect(rows.map((r) => r.authorized)).toEqual([true, false, true]);
+      await expect(pool.query('DELETE FROM selfie_authorizations')).rejects.toThrow(
+        /permission denied/,
+      );
+    });
+
+    it('el administrador ve la marcación «sin selfie» y no hay foto que pedir', async () => {
+      const employee = await readyEmployee(false);
+      const marked = await call(
+        'POST',
+        '/attendance',
+        employee.cookie,
+        markBody('check_in', { photo: null }),
+      );
+      const { id } = marked.json<{ id: string }>();
+      const admin = await loggedIn('admin');
+      const list = await call('GET', '/admin/attendance', admin.cookie);
+      const entry = list.json<{ id: string; selfie: string }[]>().find((e) => e.id === id);
+      expect(entry?.selfie).toBe('not-authorized');
+      expect(
+        (await call('GET', '/admin/attendance/' + id + '/selfie', admin.cookie)).statusCode,
+      ).toBe(404);
+    });
+
+    it('conservación: borra las selfies de más de 90 días; las que esperan revisión, hasta un año', async () => {
+      const { user } = await readyEmployee(true);
+      const old = new Date(Date.now() - 120 * 86_400_000);
+      const plant = async (status: 'ok' | 'pending') => {
+        const id = randomUUID();
+        const key = selfieKey(user.id, id, old);
+        await photos.put(key, Buffer.from(selfie, 'base64'));
+        await pool.query(
+          `INSERT INTO attendance_records (id, employee_id, kind, server_time, latitude, longitude,
+             accuracy_m, location_captured_at, photo_key, review_status)
+           VALUES ($1, $2, 'check_in', $3, 3.45, -76.53, 8, $3, $4, $5)`,
+          [id, user.id, old, key, status],
+        );
+        return { id, key };
+      };
+      const expired = await plant('ok');
+      const underReview = await plant('pending');
+
+      const { deleted } = await purgeExpiredSelfies(db, photos, new Date());
+      expect(deleted).toBeGreaterThanOrEqual(1);
+      await expect(photos.get(expired.key)).rejects.toThrow();
+      expect((await photos.get(underReview.key)).length).toBeGreaterThan(0);
+
+      const admin = await loggedIn('admin');
+      const res = await call('GET', `/admin/attendance/${expired.id}/selfie`, admin.cookie);
+      expect(res.statusCode).toBe(404);
+      expect(res.json<{ error: { message: string } }>().error.message).toMatch(/conservación/);
+    });
   });
 });
 

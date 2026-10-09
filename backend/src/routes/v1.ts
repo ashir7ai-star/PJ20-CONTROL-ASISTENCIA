@@ -18,6 +18,7 @@ import {
   markResponseSchema,
   meSchema,
   nonceResponseSchema,
+  selfieAuthorizationRequestSchema,
   updateEmployeeSchema,
 } from '@pj20/shared';
 import { desc } from 'drizzle-orm';
@@ -37,7 +38,13 @@ import {
   setNonceCookie,
   setSessionCookie,
 } from '../auth/plugin.js';
-import { acceptConsent, type AuthDeps, currentUser, signInWithGoogle } from '../auth/service.js';
+import {
+  acceptConsent,
+  type AuthDeps,
+  currentUser,
+  setSelfieAuthorization,
+  signInWithGoogle,
+} from '../auth/service.js';
 import { hashToken, revokeSession } from '../auth/sessions.js';
 import { ACCESS_PROOF_TTL_SECONDS, type AccessProofStore } from '../access/proof.js';
 import {
@@ -226,9 +233,18 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
     '/me/consent',
     { schema: { tags: ['me'], body: consentRequestSchema } },
     async (request, reply) => {
-      await acceptConsent(db, requireSession(request), meta(request));
+      await acceptConsent(db, requireSession(request), request.body.selfie, meta(request));
       return reply.code(204).send();
     },
+  );
+
+  app.put(
+    '/me/selfie-authorization',
+    {
+      schema: { tags: ['me'], body: selfieAuthorizationRequestSchema, response: { 200: meSchema } },
+    },
+    async (request) =>
+      setSelfieAuthorization(db, requireSession(request), request.body.authorized, meta(request)),
   );
 
   // ── Attendance (Fase 3) ─────────────────────────────────────────────────

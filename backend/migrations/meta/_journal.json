@@ -43,6 +43,20 @@
       "when": 1791503951832,
       "tag": "0005_solicitudes_de_acceso_permisos",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791509802122,
+      "tag": "0006_autorizacion_selfie",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791509805761,
+      "tag": "0007_autorizacion_selfie_seguridad",
+      "breakpoints": true
     }
   ]
 }

@@ -19,11 +19,14 @@ import type { Database, Executor } from '../db/client.js';
 import { attendanceRecords, consents, employees } from '../db/schema.js';
 import { DomainError, errors } from '../errors.js';
 import type { PhotoStore } from '../infra/photo-store.js';
+import { selfieAuthorized } from '../auth/selfie.js';
 import {
   businessDayRange,
   isValidSelfie,
   reviewReasons,
   selfieKey,
+  selfieRuleError,
+  selfieState,
   transitionError,
 } from './rules.js';
 
@@ -68,8 +71,8 @@ export async function markAttendance(
   input: MarkRequest,
   meta: MarkMeta,
 ): Promise<MarkResponse> {
-  const jpeg = Buffer.from(input.photo, 'base64');
-  if (!isValidSelfie(jpeg)) {
+  const jpeg = input.photo === undefined ? null : Buffer.from(input.photo, 'base64');
+  if (jpeg && !isValidSelfie(jpeg)) {
     throw new DomainError(
       'VALIDATION_ERROR',
       400,
@@ -104,13 +107,17 @@ export async function markAttendance(
       throw errors.ruleViolation('Antes de marcar debes aceptar el tratamiento de tus datos.');
     }
 
+    // D7: the selfie follows the employee's own authorization, never the client's say-so.
+    const selfieProblem = selfieRuleError(await selfieAuthorized(tx, employeeId), jpeg !== null);
+    if (selfieProblem) throw errors.ruleViolation(selfieProblem);
+
     const last = await lastRecord(tx, employeeId);
     const problem = transitionError(last?.kind ?? null, input.kind);
     if (problem) throw errors.ruleViolation(problem);
 
     const id = randomUUID();
-    const key = selfieKey(employeeId, id, new Date());
-    await photos.put(key, jpeg);
+    const key = jpeg ? selfieKey(employeeId, id, new Date()) : null;
+    if (key && jpeg) await photos.put(key, jpeg);
     try {
       const [row] = await tx
         .insert(attendanceRecords)
@@ -138,9 +145,10 @@ export async function markAttendance(
         accuracyM: row.accuracyM,
         reviewStatus: row.reviewStatus,
         reviewReasons: row.reviewReasons as ReviewReason[],
+        withSelfie: row.photoKey !== null,
       };
     } catch (error) {
-      await photos.remove(key).catch(() => undefined);
+      if (key) await photos.remove(key).catch(() => undefined);
       throw error;
     }
   });
@@ -149,6 +157,7 @@ export async function markAttendance(
 /** Every record of one Bogotá calendar day, newest first, with the employee. */
 export async function listDay(db: Database, date: string): Promise<AdminAttendanceEntry[]> {
   const { start, end } = businessDayRange(date);
+  const now = new Date();
   const rows = await db
     .select({ record: attendanceRecords, employee: employees })
     .from(attendanceRecords)
@@ -169,6 +178,7 @@ export async function listDay(db: Database, date: string): Promise<AdminAttendan
     reviewReasons: r.reviewReasons as ReviewReason[],
     ip: r.ip,
     userAgent: r.userAgent,
+    selfie: selfieState(r, now),
   }));
 }
 
@@ -179,9 +189,17 @@ export async function readSelfie(
   recordId: string,
 ): Promise<Uint8Array> {
   const [row] = await db
-    .select({ key: attendanceRecords.photoKey })
+    .select({
+      photoKey: attendanceRecords.photoKey,
+      serverTime: attendanceRecords.serverTime,
+      reviewStatus: attendanceRecords.reviewStatus,
+    })
     .from(attendanceRecords)
     .where(eq(attendanceRecords.id, recordId));
   if (!row) throw errors.notFound('La marcación');
-  return photos.get(row.key);
+  if (!row.photoKey) throw errors.notFound('La selfie de esta marcación (se marcó sin selfie)');
+  if (selfieState(row, new Date()) === 'expired') {
+    throw errors.notFound('La selfie (se eliminó por la política de conservación)');
+  }
+  return photos.get(row.photoKey);
 }

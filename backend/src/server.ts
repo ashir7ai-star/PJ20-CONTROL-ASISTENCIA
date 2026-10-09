@@ -6,10 +6,12 @@ import { createDatabase } from './db/client.js';
 import { checkDatabase, createDatabasePool } from './infra/postgres.js';
 import { checkCache, createRedisClient } from './infra/redis.js';
 import { createAccessProofStore } from './access/proof.js';
+import { purgeExpiredSelfies } from './attendance/retention.js';
 import { createPhotoStore } from './infra/photo-store.js';
 import { checkStorage, createStorageClient, ensureBucket } from './infra/storage.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
+const PURGE_EVERY_MS = 12 * 60 * 60 * 1000;
 
 async function main(): Promise<void> {
   const env = loadEnv();
@@ -23,6 +25,8 @@ async function main(): Promise<void> {
     secretKey: env.S3_SECRET_KEY,
   });
 
+  const photos = createPhotoStore(storage, env.S3_BUCKET);
+  const appDb = createDatabase(db);
   const app = await buildApp({
     appOrigins: env.APP_ORIGINS,
     trustProxy: env.TRUST_PROXY,
@@ -37,11 +41,11 @@ async function main(): Promise<void> {
       storage: () => checkStorage(storage, env.S3_BUCKET),
     },
     api: {
-      db: createDatabase(db),
+      db: appDb,
       redis,
       verifier: createGoogleVerifier(env.GOOGLE_CLIENT_ID),
       nonces: createNonceStore(redis),
-      photos: createPhotoStore(storage, env.S3_BUCKET),
+      photos,
       accessProofs: createAccessProofStore(redis),
     },
   });
@@ -85,6 +89,20 @@ async function main(): Promise<void> {
   process.on('SIGINT', shutdown);
 
   await app.listen({ host: env.HOST, port: env.PORT });
+
+  // Selfie retention (D7): a minute after start, then twice a day.
+  const purge = () => {
+    purgeExpiredSelfies(appDb, photos, new Date()).then(
+      ({ deleted }) => {
+        app.log.info({ deleted }, 'selfie retention purge');
+      },
+      (error: unknown) => {
+        app.log.error({ err: error }, 'selfie retention purge failed');
+      },
+    );
+  };
+  setTimeout(purge, 60_000).unref();
+  setInterval(purge, PURGE_EVERY_MS).unref();
 }
 
 main().catch((error: unknown) => {

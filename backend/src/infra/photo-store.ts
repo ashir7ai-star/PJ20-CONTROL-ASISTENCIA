@@ -6,6 +6,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   type S3Client,
 } from '@aws-sdk/client-s3';
@@ -14,6 +15,8 @@ export interface PhotoStore {
   put(key: string, jpeg: Uint8Array): Promise<void>;
   get(key: string): Promise<Uint8Array>;
   remove(key: string): Promise<void>;
+  /** Every stored key under a prefix (for retention clean-up). */
+  listKeys(prefix: string): Promise<string[]>;
 }
 
 export function createPhotoStore(client: S3Client, bucket: string): PhotoStore {
@@ -30,6 +33,18 @@ export function createPhotoStore(client: S3Client, bucket: string): PhotoStore {
     },
     async remove(key) {
       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+    },
+    async listKeys(prefix) {
+      const keys: string[] = [];
+      let token: string | undefined;
+      do {
+        const page = await client.send(
+          new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }),
+        );
+        for (const object of page.Contents ?? []) if (object.Key) keys.push(object.Key);
+        token = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (token);
+      return keys;
     },
   };
 }
