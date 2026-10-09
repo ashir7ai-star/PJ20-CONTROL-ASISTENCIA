@@ -52,6 +52,7 @@ function stateForAccessIssue(issue: string): State {
 
 export function RealApp() {
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const [saving, setSaving] = useState(false);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
   const navigate = useNavigate();
 
@@ -128,16 +129,46 @@ export function RealApp() {
         <Suspense fallback={<AppLoading />}>
           {me.consentRequired ? (
             <ConsentScreen
-              onAccept={() =>
+              busy={saving}
+              onAccept={(selfie) => {
+                setSaving(true);
+                // Either way the session is read again: the server says what is in force.
                 void api('/me/consent', {
                   method: 'POST',
-                  body: { version: CONSENT_VERSION },
-                }).then(loadSession)
-              }
+                  body: { version: CONSENT_VERSION, selfie },
+                })
+                  .catch(() => undefined)
+                  .finally(() => {
+                    setSaving(false);
+                    loadSession();
+                  });
+              }}
+            />
+          ) : me.selfieAuthorized === null ? (
+            // Consent given before the selfie became a separate decision (D7): ask it now.
+            <ConsentScreen
+              mode="selfie-only"
+              busy={saving}
+              onAccept={(selfie) => {
+                setSaving(true);
+                void api<Me>('/me/selfie-authorization', {
+                  method: 'PUT',
+                  body: { authorized: selfie },
+                })
+                  .then((next) => {
+                    setState({ kind: 'signed-in', me: next });
+                  }, loadSession)
+                  .finally(() => {
+                    setSaving(false);
+                  });
+              }}
             />
           ) : (
             <EmployeeHome
               me={me}
+              onMeChange={(next) => {
+                setState({ kind: 'signed-in', me: next });
+              }}
               onLogout={() => void logout()}
               onSessionExpired={onSessionExpired}
               {...(me.role === 'admin'

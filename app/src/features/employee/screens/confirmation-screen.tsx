@@ -14,6 +14,8 @@ interface ConfirmationScreenProps {
   accuracyM: number;
   /** Accepted but flagged (weak GPS, old fix): the employee is told openly. */
   reviewPending?: boolean;
+  /** false: marked without selfie (not authorized, D7). */
+  withSelfie?: boolean;
   onDone?: () => void;
 }
 
@@ -23,6 +25,7 @@ export function ConfirmationScreen({
   serverTime,
   accuracyM,
   reviewPending = false,
+  withSelfie = true,
   onDone,
 }: ConfirmationScreenProps) {
   const clock = formatClock(serverTime);
@@ -54,7 +57,11 @@ export function ConfirmationScreen({
             label="Ubicación"
             value={formatAccuracy(accuracyM)}
           />
-          <Detail icon={<Camera className="size-5" />} label="Selfie" value="Guardada" />
+          <Detail
+            icon={<Camera className="size-5" />}
+            label="Selfie"
+            value={withSelfie ? 'Guardada' : 'No autorizada'}
+          />
         </ul>
       </Card>
       {reviewPending && (

@@ -111,13 +111,14 @@ Prohibido confiar en lo que reporta el celular. La defensa es por capas y **la d
    - País/ciudad de la IP incompatible con el GPS.
    - Ubicación muy antigua (timestamp del fix GPS con más de 30 s).
      Las marcaciones sospechosas se guardan **marcadas** y aparecen en una bandeja de revisión del administrador.
-6. **Selfie obligatoria** en cada marcación, tomada **en vivo con la cámara frontal** dentro de la app (prohibido elegir de la galería). **Debe mostrar el rostro y el lugar de fondo** (encuadre amplio, brazo estirado) para que el administrador verifique que el empleado está en su sitio de trabajo. Se guarda en almacenamiento privado que nunca se expone a internet; solo la ven administradores con sesión válida, a través de la API, que la verifica en cada petición (decisión 0004).
+6. **Selfie con autorización propia (D7).** Es un dato sensible (Ley 1581 arts. 5–6): se pide **aparte** de la autorización general, informando que **no es obligatoria** (Decreto 1377 art. 6), y el empleado puede revocarla cuando quiera. Quien no la autoriza marca **solo con GPS y hora del servidor** y su marcación queda señalada «sin selfie» (alternativa exigida por la SIC, Res. 52185 de 2025). Quien la autoriza la toma en cada marcación, **en vivo con la cámara frontal** dentro de la app (prohibido elegir de la galería). **Debe mostrar el rostro y el lugar de fondo** (encuadre amplio, brazo estirado) para que el administrador verifique que el empleado está en su sitio de trabajo. Se guarda en almacenamiento privado que nunca se expone a internet; solo la ven administradores con sesión válida, a través de la API, que la verifica en cada petición (decisión 0004). Se borra a los 90 días (hasta 1 año si la marcación está en revisión).
 7. **Ninguna capa es infalible por sí sola.** Toda nueva técnica de fraude detectada se documenta y se agrega como capa adicional.
 
 ## 3. Privacidad (Ley 1581 de 2012 — Habeas Data, Colombia)
 
 1. La ubicación se captura **solo en el momento de marcar**. Prohibido el rastreo continuo.
-2. **Consentimiento informado** en el primer ingreso, guardado con fecha y versión del texto aceptado. Debe cubrir explícitamente ubicación, fotografía (selfie) e información del dispositivo. Las fotos del rostro son **datos sensibles**: consentimiento expreso y acceso restringido a administradores.
+2. **Consentimiento informado** en el primer ingreso, guardado con fecha y versión del texto aceptado. Cubre ubicación, hora e información del dispositivo; la **selfie lleva una autorización separada y opcional**, con historial inmutable de cada decisión (D7). Acceso a las fotos restringido a administradores.
+   - **Conservación (D7):** marcaciones durante la relación laboral + 3 años (art. 488 CST, Ley 2466 art. 12); selfies 90 días con borrado automático; solicitudes de acceso atendidas 30 días.
 3. Recolectar el mínimo dato necesario y definir un tiempo de retención.
 4. Los logs nunca contienen tokens, cookies ni datos personales innecesarios.
 

@@ -125,8 +125,11 @@ export const attendanceRecords = pgTable(
     longitude: doublePrecision('longitude').notNull(),
     accuracyM: real('accuracy_m').notNull(),
     locationCapturedAt: timestamp('location_captured_at', { withTimezone: true }).notNull(),
-    /** Object key of the selfie in the private bucket. */
-    photoKey: text('photo_key').notNull(),
+    /**
+     * Object key of the selfie in the private bucket; null when the employee
+     * did not authorize the selfie (sensitive data, D7) and marked without it.
+     */
+    photoKey: text('photo_key'),
     ip: text('ip'),
     userAgent: text('user_agent'),
     reviewStatus: reviewStatusEnum('review_status').notNull(),
@@ -175,4 +178,27 @@ export const accessRequests = pgTable(
       .on(t.email)
       .where(sql`${t.status} = 'pending'`),
   ],
+);
+
+/**
+ * Selfie authorization history (D7). The face is sensitive data (Ley 1581
+ * art. 5): it needs its own express authorization, separate from the general
+ * one, and the employee may refuse or revoke it at any time. Append-only: the
+ * latest row is the current decision; earlier rows are the proof of each one.
+ */
+export const selfieAuthorizations = pgTable(
+  'selfie_authorizations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'restrict' }),
+    authorized: boolean('authorized').notNull(),
+    /** Version of the consent text shown when deciding. */
+    version: text('version').notNull(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
+    ip: text('ip'),
+    userAgent: text('user_agent'),
+  },
+  (t) => [index('selfie_authorizations_employee_idx').on(t.employeeId, t.decidedAt)],
 );

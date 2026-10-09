@@ -24,6 +24,7 @@ describe('flujo completo del prototipo del empleado', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Continuar con Google' }));
     fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(screen.getByRole('radio', { name: 'Sí, autorizo la selfie' }));
     fireEvent.click(screen.getByRole('button', { name: 'Aceptar y continuar' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Permitir acceso' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Marcar entrada' }));

@@ -1,5 +1,4 @@
 import { CONSENT_LABEL } from '@pj20/shared/constants';
-import { FileWarning } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { BrandHeader } from '../components/brand/brand-header.js';
@@ -8,20 +7,15 @@ import { BrandHeader } from '../components/brand/brand-header.js';
  * Política de Tratamiento de Datos Personales (Ley 1581 de 2012 y Decreto
  * 1377 de 2013). Public page: linked from the consent screen and from the
  * Google sign-in consent screen.
- * DRAFT: company identification fields must be completed and the text
- * reviewed by BLAZAR ENERGY's legal advisor before production.
+ * Final text (D7, 2026-10-09): sensitive-data authorization apart from the
+ * general one, an alternative without selfie, and the retention periods the
+ * app actually enforces. Legal sources: docs/phases/D7-CUMPLIMIENTO-LEGAL.md.
  */
 export function PrivacyPolicyPage() {
   return (
     <div className="min-h-dvh bg-surface text-ink">
       <main className="mx-auto max-w-2xl px-6 py-12">
         <BrandHeader />
-
-        <p className="mt-8 flex items-start gap-3 rounded-2xl bg-warning-soft px-4 py-3 text-[14px] font-medium text-warning">
-          <FileWarning className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-          Borrador pendiente de revisión legal y de completar los datos de identificación de la
-          empresa. No usar en producción hasta su aprobación.
-        </p>
 
         <h1 className="mt-8 text-[28px] font-semibold tracking-tight">
           Política de Tratamiento de Datos Personales
@@ -34,9 +28,7 @@ export function PrivacyPolicyPage() {
           <ul>
             <li>Razón social: BLAZAR ENERGY</li>
             <li>NIT: 901.724.892-9</li>
-            <li>
-              Domicilio: Av. 6 Norte # 49-06 · <Pending>ciudad</Pending>
-            </li>
+            <li>Domicilio: Av. 6 Norte # 49-06, Cali, Valle del Cauca, Colombia</li>
             <li>
               Correo para asuntos de datos personales:{' '}
               <a
@@ -61,12 +53,13 @@ export function PrivacyPolicyPage() {
               momento.
             </li>
             <li>
-              <strong>Fotografía (selfie):</strong> tomada al marcar, donde se ven tu rostro y el
-              lugar donde estás. Es un <strong>dato sensible</strong>.
+              <strong>Fotografía (selfie), opcional:</strong> tomada al marcar, donde se ven tu
+              rostro y el lugar donde estás. Es un <strong>dato sensible</strong> y solo la tomamos
+              si la autorizas aparte (punto 4).
             </li>
             <li>
-              <strong>Dispositivo:</strong> modelo, sistema operativo, versión de la aplicación,
-              dirección IP e identificador del celular autorizado.
+              <strong>Dispositivo:</strong> tipo de navegador o aplicación, sistema operativo y
+              dirección IP desde la que marcas.
             </li>
             <li>
               <strong>Registros de asistencia:</strong> hora de entrada y salida, asignada por el
@@ -90,12 +83,23 @@ export function PrivacyPolicyPage() {
 
         <Section title="4. Datos sensibles">
           <p>
-            La fotografía de tu rostro es un dato sensible. Solo la tratamos con tu autorización
-            expresa y solo pueden verla los administradores autorizados. De acuerdo con la ley,{' '}
-            <strong>no estás obligado a autorizar el tratamiento de datos sensibles</strong>. Si no
-            lo autorizas, informa al área de Talento Humano para acordar un mecanismo alternativo de
-            registro de asistencia.
+            La fotografía de tu rostro es un dato sensible (artículo 5 de la Ley 1581 de 2012). Por
+            eso te pedimos una <strong>autorización separada</strong> de la general, y solo pueden
+            verla los administradores autorizados. De acuerdo con la ley,{' '}
+            <strong>no estás obligado a autorizar el tratamiento de datos sensibles</strong>.
           </p>
+          <ul>
+            <li>
+              <strong>Si no la autorizas:</strong> marcas solo con tu ubicación y la hora del
+              servidor. Tus marcaciones aparecen como «sin selfie» para el administrador, que podrá
+              verificar tu asistencia por otros medios. No afecta tu relación laboral.
+            </li>
+            <li>
+              <strong>Puedes cambiar de decisión cuando quieras</strong> desde el menú de tu cuenta
+              → «Autorización de selfie». Guardamos la fecha de cada decisión como prueba.
+            </li>
+          </ul>
+          <p></p>
         </Section>
 
         <Section title="5. Tus derechos">
@@ -128,8 +132,8 @@ export function PrivacyPolicyPage() {
           <ul>
             <li>Toda la información viaja cifrada (HTTPS).</li>
             <li>
-              Las fotografías se guardan en almacenamiento privado y solo se muestran mediante
-              enlaces temporales.
+              Las fotografías se guardan en un almacenamiento privado que nunca se expone a internet
+              y solo se muestran a administradores con sesión activa.
             </li>
             <li>Solo los administradores autorizados acceden a la información de asistencia.</li>
             <li>
@@ -139,17 +143,35 @@ export function PrivacyPolicyPage() {
         </Section>
 
         <Section title="8. Conservación">
-          <p>
-            Conservamos los datos durante la relación laboral y por el tiempo adicional que exijan
-            las normas laborales y de auditoría. <Pending>plazo de conservación definitivo</Pending>
-          </p>
+          <p>Conservamos cada dato solo el tiempo necesario para su finalidad:</p>
+          <ul>
+            <li>
+              <strong>Registros de asistencia</strong> (hora, tipo y ubicación): durante la relación
+              laboral y <strong>3 años después</strong> de terminada, porque son soporte del
+              registro de jornada y horas extras (artículo 162 del Código Sustantivo del Trabajo,
+              modificado por la Ley 2466 de 2025) y las acciones laborales prescriben en 3 años
+              (artículo 488 del mismo código).
+            </li>
+            <li>
+              <strong>Selfies:</strong> <strong>90 días</strong> desde la marcación y luego se
+              borran automáticamente. Si la marcación está en revisión, se conservan hasta
+              resolverla, con un máximo de 1 año.
+            </li>
+            <li>
+              <strong>Solicitudes de acceso</strong> ya atendidas: 30 días.
+            </li>
+            <li>
+              <strong>Autorizaciones y consentimientos:</strong> mientras se conserven los datos que
+              respaldan, como prueba de que los otorgaste.
+            </li>
+          </ul>
         </Section>
 
         <Section title="9. Vigencia">
           <p>
-            Esta política rige desde su publicación ({CONSENT_LABEL}). Cualquier cambio sustancial
-            se informará en la aplicación y, cuando la ley lo exija, se solicitará una nueva
-            autorización.
+            Esta política rige desde el 9 de octubre de 2026 ({CONSENT_LABEL}). Cualquier cambio
+            sustancial se informará en la aplicación y, cuando la ley lo exija, se solicitará una
+            nueva autorización.
           </p>
         </Section>
       </main>
@@ -163,14 +185,5 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h2 className="text-[18px] font-semibold tracking-tight">{title}</h2>
       {children}
     </section>
-  );
-}
-
-/** Visible marker for data the company still has to provide. */
-function Pending({ children }: { children: ReactNode }) {
-  return (
-    <span className="rounded-md bg-warning-soft px-1.5 py-0.5 text-[13px] font-semibold text-warning">
-      Por completar: {children}
-    </span>
   );
 }

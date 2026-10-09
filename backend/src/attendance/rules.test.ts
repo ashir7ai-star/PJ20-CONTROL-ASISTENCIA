@@ -6,7 +6,10 @@ import {
   businessToday,
   isValidSelfie,
   reviewReasons,
+  selfieExpired,
   selfieKey,
+  selfieRuleError,
+  selfieState,
   transitionError,
 } from './rules.js';
 
@@ -101,5 +104,32 @@ describe('día laboral en Bogotá (UTC−5)', () => {
     expect(selfieKey('emp', 'rec', new Date('2026-10-09T04:00:00Z'))).toBe(
       'selfies/2026/10/08/emp/rec.jpg',
     );
+  });
+});
+
+describe('selfie: autorización y conservación (D7)', () => {
+  const now = new Date('2026-12-31T12:00:00Z');
+  const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000);
+
+  it('con autorización la foto es obligatoria; sin ella está prohibida', () => {
+    expect(selfieRuleError(true, true)).toBeNull();
+    expect(selfieRuleError(true, false)).toMatch(/Falta la selfie/);
+    expect(selfieRuleError(false, false)).toBeNull();
+    expect(selfieRuleError(false, true)).toMatch(/No autorizaste la selfie/);
+    expect(selfieRuleError(null, true)).toMatch(/No autorizaste/);
+  });
+
+  it('una selfie normal vence a los 90 días; una en revisión, al año', () => {
+    expect(selfieExpired({ serverTime: daysAgo(89), reviewStatus: 'ok' }, now)).toBe(false);
+    expect(selfieExpired({ serverTime: daysAgo(91), reviewStatus: 'ok' }, now)).toBe(true);
+    expect(selfieExpired({ serverTime: daysAgo(200), reviewStatus: 'pending' }, now)).toBe(false);
+    expect(selfieExpired({ serverTime: daysAgo(366), reviewStatus: 'pending' }, now)).toBe(true);
+  });
+
+  it('el administrador ve si la selfie está, si no se autorizó o si ya se eliminó', () => {
+    const base = { serverTime: daysAgo(1), reviewStatus: 'ok' as const };
+    expect(selfieState({ ...base, photoKey: 'k' }, now)).toBe('stored');
+    expect(selfieState({ ...base, photoKey: null }, now)).toBe('not-authorized');
+    expect(selfieState({ ...base, photoKey: 'k', serverTime: daysAgo(120) }, now)).toBe('expired');
   });
 });

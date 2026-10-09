@@ -32,12 +32,16 @@ export const markRequestSchema = z.object({
   }),
   /** Device clock when the request was sent: informative only (§2.1). */
   deviceTime: isoDateTime,
-  /** Live front-camera selfie, JPEG, base64 without the data: prefix. */
+  /**
+   * Live front-camera selfie, JPEG, base64 without the data: prefix. Omitted
+   * when the employee did not authorize the selfie (D7).
+   */
   photo: z
     .string()
     .min(100)
     .max(MAX_SELFIE_BASE64)
-    .regex(/^[A-Za-z0-9+/]+={0,2}$/),
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/)
+    .optional(),
 });
 export type MarkRequest = z.infer<typeof markRequestSchema>;
 
@@ -49,6 +53,7 @@ export const markResponseSchema = z.object({
   accuracyM: z.number(),
   reviewStatus: reviewStatusSchema,
   reviewReasons: z.array(reviewReasonSchema),
+  withSelfie: z.boolean(),
 });
 export type MarkResponse = z.infer<typeof markResponseSchema>;
 
@@ -75,5 +80,7 @@ export const adminAttendanceEntrySchema = z.object({
   reviewReasons: z.array(reviewReasonSchema),
   ip: z.string().nullable(),
   userAgent: z.string().nullable(),
+  /** stored · not-authorized (marked without selfie, D7) · expired (deleted by retention). */
+  selfie: z.enum(['stored', 'not-authorized', 'expired']),
 });
 export type AdminAttendanceEntry = z.infer<typeof adminAttendanceEntrySchema>;

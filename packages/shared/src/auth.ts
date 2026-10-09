@@ -30,10 +30,22 @@ export const meSchema = z.object({
   role: roleSchema,
   /** True when the user must (re)accept the current consent version. */
   consentRequired: z.boolean(),
+  /**
+   * Selfie authorization (sensitive data, D7): true/false = the latest decision,
+   * null = never decided (asked together with the consent).
+   */
+  selfieAuthorized: z.boolean().nullable(),
 });
 export type Me = z.infer<typeof meSchema>;
 
-export const consentRequestSchema = z.object({ version: z.literal(CONSENT_VERSION) });
+/** The general consent and, SEPARATELY, the optional selfie authorization (D7). */
+export const consentRequestSchema = z.object({
+  version: z.literal(CONSENT_VERSION),
+  selfie: z.boolean(),
+});
+
+/** Change of mind at any time: grant or revoke the selfie authorization. */
+export const selfieAuthorizationRequestSchema = z.object({ authorized: z.boolean() });
 
 // ── User management (admin) ───────────────────────────────────────────────
 

@@ -7,24 +7,30 @@ import { EmployeeLayout } from '../components/employee-layout.js';
 
 interface PermissionsScreenProps {
   onRequest?: () => void;
+  /** false: the employee did not authorize the selfie, so only location is asked (D7). */
+  camera?: boolean;
 }
 
 /** Explains WHY before the system dialog appears — far fewer "Denegar" taps. */
-export function PermissionsScreen({ onRequest }: PermissionsScreenProps) {
+export function PermissionsScreen({ onRequest, camera = true }: PermissionsScreenProps) {
   return (
     <EmployeeLayout>
       <h1 className="mt-10 text-[26px] font-semibold tracking-tight">Antes de empezar</h1>
       <p className="mt-2 text-[15px] leading-relaxed text-ink-muted">
-        Para marcar, la aplicación necesita dos permisos de tu celular.
+        {camera
+          ? 'Para marcar, la aplicación necesita dos permisos de tu celular.'
+          : 'Para marcar, la aplicación necesita un permiso de tu celular.'}
       </p>
 
       <div className="mt-6 flex flex-col gap-3">
         <PermissionCard icon={<MapPin className="size-6" />} title="Ubicación">
           Registra desde dónde marcas. Solo se usa en ese momento.
         </PermissionCard>
-        <PermissionCard icon={<Camera className="size-6" />} title="Cámara">
-          Toma una selfie al marcar donde se vean tu rostro y el lugar donde estás.
-        </PermissionCard>
+        {camera && (
+          <PermissionCard icon={<Camera className="size-6" />} title="Cámara">
+            Toma una selfie al marcar donde se vean tu rostro y el lugar donde estás.
+          </PermissionCard>
+        )}
       </div>
 
       <div className="mt-auto pt-8">

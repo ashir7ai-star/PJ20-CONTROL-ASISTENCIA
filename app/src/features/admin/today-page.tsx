@@ -5,7 +5,7 @@
  * decision 0004).
  */
 import type { AdminAttendanceEntry, ReviewReason } from '@pj20/shared';
-import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { CameraOff, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
@@ -16,6 +16,7 @@ import { Card } from '../../components/ui/card.js';
 import { Sheet } from '../../components/ui/sheet.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
 import { StatusBadge } from '../../components/ui/status-badge.js';
+import { cn } from '../../lib/cn.js';
 import { formatAccuracy, formatLongDate, formatTime, TIME_ZONE } from '../../lib/format.js';
 import { AdminShell } from './admin-shell.js';
 import { KindLabel } from './components/admin-ui.js';
@@ -259,21 +260,38 @@ function EntryCard({
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${String(entry.latitude)},${String(entry.longitude)}`;
   return (
     <Card className="flex gap-4 p-4">
-      <button
-        type="button"
-        onClick={() => {
-          onOpenSelfie(entry);
-        }}
-        className="size-20 shrink-0 overflow-hidden rounded-2xl bg-surface"
-        aria-label={`Ver selfie de ${entry.employee.name}`}
-      >
-        <img
-          src={`/api/v1/admin/attendance/${entry.id}/selfie`}
-          alt=""
-          loading="lazy"
-          className="size-full object-cover"
-        />
-      </button>
+      {entry.selfie === 'stored' ? (
+        <button
+          type="button"
+          onClick={() => {
+            onOpenSelfie(entry);
+          }}
+          className="size-20 shrink-0 overflow-hidden rounded-2xl bg-surface"
+          aria-label={`Ver selfie de ${entry.employee.name}`}
+        >
+          <img
+            src={`/api/v1/admin/attendance/${entry.id}/selfie`}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover"
+          />
+        </button>
+      ) : (
+        // No photo: not authorized by the employee (D7) or deleted by retention.
+        <span
+          className={cn(
+            'grid size-20 shrink-0 place-items-center rounded-2xl px-1 text-center text-[11px] font-semibold leading-tight',
+            entry.selfie === 'not-authorized'
+              ? 'bg-warning-soft text-warning'
+              : 'bg-surface text-ink-muted',
+          )}
+        >
+          <span>
+            <CameraOff className="mx-auto mb-1 size-5" aria-hidden="true" />
+            {entry.selfie === 'not-authorized' ? 'Sin selfie' : 'Foto eliminada'}
+          </span>
+        </span>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -299,6 +317,16 @@ function EntryCard({
             Mapa · {formatAccuracy(entry.accuracyM)}
           </a>
         </div>
+        {entry.selfie === 'not-authorized' && (
+          <p className="mt-2 text-[13px] text-ink-muted">
+            No autorizó la selfie (es opcional por ley): verifícala por otro medio si hace falta.
+          </p>
+        )}
+        {entry.selfie === 'expired' && (
+          <p className="mt-2 text-[13px] text-ink-muted">
+            La selfie se borró por la política de conservación (90 días).
+          </p>
+        )}
         {entry.reviewStatus === 'pending' && (
           <StatusBadge tone="warning" className="mt-2">
             Por revisar: {entry.reviewReasons.map((r) => reasonLabels[r]).join(' · ')}

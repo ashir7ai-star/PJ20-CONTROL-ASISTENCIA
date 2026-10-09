@@ -7,6 +7,8 @@ import {
   MAX_FIX_AGE_S,
   MAX_SELFIE_BYTES,
   type ReviewReason,
+  SELFIE_RETENTION_DAYS,
+  SELFIE_REVIEW_RETENTION_DAYS,
   WEAK_ACCURACY_M,
 } from '@pj20/shared';
 
@@ -76,4 +78,39 @@ export function businessToday(now: Date): string {
 export function selfieKey(employeeId: string, recordId: string, serverTime: Date): string {
   const day = businessToday(serverTime);
   return `selfies/${day.replaceAll('-', '/')}/${employeeId}/${recordId}.jpg`;
+}
+
+/**
+ * Retention of selfies (D7, Decreto 1377 art. 11): 90 days, or up to a year
+ * while the record still waits for review. Attendance rows themselves stay.
+ */
+export function selfieExpired(
+  record: { serverTime: Date; reviewStatus: 'ok' | 'pending' },
+  now: Date,
+): boolean {
+  const ageDays = (now.getTime() - record.serverTime.getTime()) / DAY_MS;
+  const limit =
+    record.reviewStatus === 'pending' ? SELFIE_REVIEW_RETENTION_DAYS : SELFIE_RETENTION_DAYS;
+  return ageDays > limit;
+}
+
+/** What the admin can see of a record's selfie. */
+export function selfieState(
+  record: { photoKey: string | null; serverTime: Date; reviewStatus: 'ok' | 'pending' },
+  now: Date,
+): 'stored' | 'not-authorized' | 'expired' {
+  if (!record.photoKey) return 'not-authorized';
+  return selfieExpired(record, now) ? 'expired' : 'stored';
+}
+
+/**
+ * Selfie rule (D7): authorized → the photo is required; not authorized (or never
+ * decided) → no photo may be sent. Returns the Spanish reason when broken.
+ */
+export function selfieRuleError(authorized: boolean | null, hasPhoto: boolean): string | null {
+  if (authorized === true && !hasPhoto) return 'Falta la selfie. Toma la foto para marcar.';
+  if (authorized !== true && hasPhoto) {
+    return 'No autorizaste la selfie: marca solo con tu ubicación, o autorízala desde tu cuenta.';
+  }
+  return null;
 }

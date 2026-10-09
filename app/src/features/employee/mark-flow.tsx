@@ -22,13 +22,17 @@ type Step =
   | { kind: 'explain' }
   | { kind: 'starting' }
   | { kind: 'capture'; stream: MediaStream; fix: Fix | null; busy: boolean }
-  | { kind: 'weak'; photo: string; fix: Fix }
+  /** Without selfie (D7): only the GPS reading is awaited. */
+  | { kind: 'locating' }
+  | { kind: 'weak'; photo: string | null; fix: Fix }
   | { kind: 'sending' }
   | { kind: 'done'; record: MarkResponse }
   | { kind: 'problem'; problem: ProblemKind; body?: string };
 
 interface MarkFlowProps {
   kind: AttendanceKind;
+  /** false: the employee did not authorize the selfie — no camera at all (D7). */
+  withSelfie: boolean;
   /** Back to Marcar; `marked` tells the caller to refresh the status. */
   onClose: (marked: boolean) => void;
   onSessionExpired: () => void;
@@ -61,7 +65,7 @@ function permissionHelp(what: 'la ubicación' | 'la cámara'): string {
     : `Toca el ícono junto a la dirección de la página (arriba) → Permisos y permite ${what}. Luego inténtalo de nuevo.`;
 }
 
-export function MarkFlow({ kind, onClose, onSessionExpired }: MarkFlowProps) {
+export function MarkFlow({ kind, withSelfie, onClose, onSessionExpired }: MarkFlowProps) {
   const [step, setStep] = useState<Step>(() =>
     permissionsExplained() ? { kind: 'starting' } : { kind: 'explain' },
   );
@@ -87,6 +91,41 @@ export function MarkFlow({ kind, onClose, onSessionExpired }: MarkFlowProps) {
       setStep({ kind: 'problem', problem, ...(body ? { body } : {}) });
     },
     [release],
+  );
+
+  const send = useCallback(
+    async (photo: string | null, fix: Fix) => {
+      const body: MarkRequest = {
+        kind,
+        location: {
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+          accuracyM: fix.accuracyM,
+          capturedAt: fix.capturedAt.toISOString(),
+        },
+        deviceTime: new Date().toISOString(),
+        ...(photo ? { photo } : {}),
+      };
+      try {
+        const record = await api<MarkResponse>('/attendance', { method: 'POST', body });
+        release();
+        setStep({ kind: 'done', record });
+      } catch (error) {
+        if (!(error instanceof ApiRequestError)) {
+          showProblem('mark-failed');
+        } else if (error.code === 'NETWORK_ERROR') {
+          showProblem('offline');
+        } else if (error.code === 'SESSION_REQUIRED') {
+          release();
+          onSessionExpired();
+        } else if (error.code === 'RULE_VIOLATION' || error.code === 'VALIDATION_ERROR') {
+          showProblem('mark-failed', error.message);
+        } else {
+          showProblem('mark-failed');
+        }
+      }
+    },
+    [kind, onSessionExpired, release, showProblem],
   );
 
   const begin = useCallback(async () => {
@@ -117,6 +156,20 @@ export function MarkFlow({ kind, onClose, onSessionExpired }: MarkFlowProps) {
       },
     );
 
+    if (!withSelfie) {
+      setStep({ kind: 'locating' });
+      let value: Fix;
+      try {
+        value = await fix;
+      } catch {
+        return; // The GPS error screen is already showing.
+      }
+      if (abort.signal.aborted) return;
+      if (value.accuracyM > WEAK_ACCURACY_M) setStep({ kind: 'weak', photo: null, fix: value });
+      else await send(null, value);
+      return;
+    }
+
     try {
       const stream = await openFrontCamera();
       if (abort.signal.aborted) {
@@ -135,47 +188,12 @@ export function MarkFlow({ kind, onClose, onSessionExpired }: MarkFlowProps) {
         );
       }
     }
-  }, [showProblem]);
+  }, [send, showProblem, withSelfie]);
 
   // First paint of "starting" (or coming back from the explanation) opens camera + GPS.
   useEffect(() => {
     if (step.kind === 'starting' && !streamRef.current && !abortRef.current) void begin();
   }, [step.kind, begin]);
-
-  const send = useCallback(
-    async (photo: string, fix: Fix) => {
-      const body: MarkRequest = {
-        kind,
-        location: {
-          latitude: fix.latitude,
-          longitude: fix.longitude,
-          accuracyM: fix.accuracyM,
-          capturedAt: fix.capturedAt.toISOString(),
-        },
-        deviceTime: new Date().toISOString(),
-        photo,
-      };
-      try {
-        const record = await api<MarkResponse>('/attendance', { method: 'POST', body });
-        release();
-        setStep({ kind: 'done', record });
-      } catch (error) {
-        if (!(error instanceof ApiRequestError)) {
-          showProblem('mark-failed');
-        } else if (error.code === 'NETWORK_ERROR') {
-          showProblem('offline');
-        } else if (error.code === 'SESSION_REQUIRED') {
-          release();
-          onSessionExpired();
-        } else if (error.code === 'RULE_VIOLATION' || error.code === 'VALIDATION_ERROR') {
-          showProblem('mark-failed', error.message);
-        } else {
-          showProblem('mark-failed');
-        }
-      }
-    },
-    [kind, onSessionExpired, release, showProblem],
-  );
 
   const capture = useCallback(async () => {
     const video = videoRef.current;
@@ -212,14 +230,18 @@ export function MarkFlow({ kind, onClose, onSessionExpired }: MarkFlowProps) {
     case 'explain':
       return (
         <PermissionsScreen
+          camera={withSelfie}
           onRequest={() => {
             rememberExplained();
             setStep({ kind: 'starting' });
           }}
         />
       );
+    case 'locating':
+      return <AppLoading label="Obteniendo tu ubicación…" />;
     case 'starting':
     case 'capture':
+      if (!withSelfie) return <AppLoading label="Obteniendo tu ubicación…" />;
       return (
         <SelfieScreen
           kind={kind}
@@ -260,6 +282,7 @@ export function MarkFlow({ kind, onClose, onSessionExpired }: MarkFlowProps) {
           serverTime={new Date(step.record.serverTime)}
           accuracyM={step.record.accuracyM}
           reviewPending={step.record.reviewStatus === 'pending'}
+          withSelfie={step.record.withSelfie}
           onDone={() => {
             onClose(true);
           }}

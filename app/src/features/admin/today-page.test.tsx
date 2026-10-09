@@ -12,6 +12,7 @@ const admin: Me = {
   email: 'nathan@ylevigroup.com',
   role: 'admin',
   consentRequired: false,
+  selfieAuthorized: true,
 };
 
 const entry = (over: Partial<AdminAttendanceEntry>): AdminAttendanceEntry => ({
@@ -27,6 +28,7 @@ const entry = (over: Partial<AdminAttendanceEntry>): AdminAttendanceEntry => ({
   reviewReasons: [],
   ip: '190.1.2.3',
   userAgent: 'Android',
+  selfie: 'stored',
   ...over,
 });
 
@@ -140,5 +142,17 @@ describe('Marcaciones de hoy (administrador, datos reales)', () => {
     renderPage();
     await screen.findAllByRole('listitem');
     expect(await a11yViolations(document.body)).toEqual([]);
+  });
+
+  it('muestra «Sin selfie» cuando no se autorizó y «Foto eliminada» al vencer (D7)', async () => {
+    entries = [
+      entry({ selfie: 'not-authorized' }),
+      entry({ id: '0d0d0d0d-1a2b-4c3d-8e9f-0a1b2c3d4e5f', selfie: 'expired' }),
+    ];
+    renderPage();
+    expect(await screen.findByText('Sin selfie')).toBeInTheDocument();
+    expect(screen.getByText('Foto eliminada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ver selfie/ })).toBeNull();
+    expect(screen.getByText(/es opcional por ley/)).toBeInTheDocument();
   });
 });
