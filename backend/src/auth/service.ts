@@ -55,7 +55,7 @@ export async function signInWithGoogle(
       after: { email: identity.email },
     });
     // Same answer for unknown and inactive accounts: no hints for attackers.
-    throw errors.accountNotAuthorized();
+    throw errors.accountNotAuthorized({ email: identity.email, name: identity.name });
   }
 
   const session = await createSession(db, employee.id, employee.role, meta);

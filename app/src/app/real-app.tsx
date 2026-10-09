@@ -9,6 +9,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 
 import { api, ApiRequestError } from '../api/client.js';
 import { GoogleButton } from '../auth/google-button.js';
+import { AccessRequest } from '../features/employee/access-request.js';
 import { AppLoading } from '../components/brand/app-loading.js';
 import { LoginScreen } from '../features/employee/screens/login-screen.js';
 import { ProblemScreen } from '../features/employee/screens/problem-screen.js';
@@ -100,9 +101,8 @@ export function RealApp() {
       return <ProblemScreen kind="offline" onPrimary={loadSession} />;
     case 'not-authorized':
       return (
-        <ProblemScreen
-          kind="not-authorized"
-          onPrimary={() => {
+        <AccessRequest
+          onExit={() => {
             setState({ kind: 'signed-out', error: null });
           }}
         />

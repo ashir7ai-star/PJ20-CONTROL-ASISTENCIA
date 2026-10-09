@@ -3,9 +3,9 @@
  * back to Marcar and sign-out. It confirms the session is an administrator's
  * before rendering anything; the server checks every request anyway.
  */
-import type { Me } from '@pj20/shared';
+import type { AccessRequestDto, Me } from '@pj20/shared';
 import { Fingerprint, LogOut } from 'lucide-react';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router';
 
 import { api } from '../../api/client.js';
@@ -19,9 +19,33 @@ const tabs = [
   { to: '/admin/empleados', label: 'Empleados' },
 ];
 
-export function AdminShell({ children }: { children: (me: Me) => ReactNode }) {
+export interface ShellTools {
+  /** Re-reads the counters shown on the tabs (e.g. after resolving a request). */
+  refreshCounts: () => void;
+}
+
+export function AdminShell({ children }: { children: (me: Me, tools: ShellTools) => ReactNode }) {
   const navigate = useNavigate();
   const [me, setMe] = useState<Me | null>(null);
+  const [pendingRequests, setPendingRequests] = useState(0);
+  const [countsVersion, setCountsVersion] = useState(0);
+  const refreshCounts = useCallback(() => {
+    setCountsVersion((n) => n + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!me) return;
+    let cancelled = false;
+    api<AccessRequestDto[]>('/admin/access-requests').then(
+      (requests) => {
+        if (!cancelled) setPendingRequests(requests.length);
+      },
+      () => undefined, // A badge is a hint: never block the page for it.
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [me, countsVersion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,11 +116,17 @@ export function AdminShell({ children }: { children: (me: Me) => ReactNode }) {
               }
             >
               {tab.label}
+              {tab.to === '/admin/empleados' && pendingRequests > 0 && (
+                <span className="ml-2 grid min-w-5 place-items-center rounded-full bg-warning px-1.5 text-[12px] font-bold text-canvas">
+                  {pendingRequests}
+                  <span className="sr-only"> solicitudes de acceso pendientes</span>
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
       </header>
-      <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">{children(me)}</main>
+      <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">{children(me, { refreshCounts })}</main>
     </div>
   );
 }

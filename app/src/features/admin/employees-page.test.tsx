@@ -1,4 +1,4 @@
-import type { EmployeeDto, Me } from '@pj20/shared';
+import type { AccessRequestDto, EmployeeDto, Me } from '@pj20/shared';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,12 +33,14 @@ interface Call {
 }
 
 let rows: EmployeeDto[];
+let requests: AccessRequestDto[];
 let calls: Call[];
 let nextError: { status: number; code: string; message: string } | null;
 
 beforeEach(() => {
   calls = [];
   nextError = null;
+  requests = [];
   rows = [
     row({}),
     row({
@@ -67,6 +69,25 @@ beforeEach(() => {
       return json(status, { error: { code, message } });
     }
     if (url === '/api/v1/admin/employees' && method === 'GET') return json(200, rows);
+    if (url === '/api/v1/admin/access-requests') return json(200, requests);
+    const resolved = /^\/api\/v1\/admin\/access-requests\/([^/]+)\/(approve|reject)$/.exec(url);
+    if (resolved && method === 'POST') {
+      const request = requests.find((r) => r.id === resolved[1]);
+      requests = requests.filter((r) => r.id !== resolved[1]);
+      if (request && resolved[2] === 'approve') {
+        rows = [
+          ...rows,
+          row({
+            id: '4d4d4d4d-1a2b-4c3d-8e9f-0a1b2c3d4e5f',
+            name: request.name,
+            email: request.email,
+            role: 'employee',
+            recordCount: 0,
+          }),
+        ];
+      }
+      return json(204);
+    }
     if (url === '/api/v1/admin/employees' && method === 'POST') {
       const created = row({
         id: '3c3c3c3c-1a2b-4c3d-8e9f-0a1b2c3d4e5f',
@@ -187,6 +208,35 @@ describe('Empleados (administrador, datos reales)', () => {
   it('es accesible', async () => {
     renderPage();
     await screen.findByText('Laura Gómez');
+    expect(await a11yViolations(document.body)).toEqual([]);
+  });
+
+  it('muestra las solicitudes de acceso con el número en la pestaña; aprobar crea al empleado', async () => {
+    requests = [
+      {
+        id: '5e5e5e5e-1a2b-4c3d-8e9f-0a1b2c3d4e5f',
+        name: 'Sofía Ortiz',
+        email: 'sofia@gmail.com',
+        requestedAt: '2026-10-09T13:00:00.000Z',
+        deactivatedEmployee: false,
+      },
+    ];
+    renderPage();
+    expect(
+      await screen.findByRole('heading', { name: 'Solicitudes pendientes (1)' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('solicitudes de acceso pendientes')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aprobar a Sofía Ortiz' }));
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('heading', { name: /Solicitudes pendientes/ })).toBeNull();
+    });
+    expect(screen.getByText('sofia@gmail.com')).toBeInTheDocument();
+    expect(calls).toContainEqual({
+      method: 'POST',
+      url: '/api/v1/admin/access-requests/5e5e5e5e-1a2b-4c3d-8e9f-0a1b2c3d4e5f/approve',
+      body: undefined,
+    });
     expect(await a11yViolations(document.body)).toEqual([]);
   });
 });

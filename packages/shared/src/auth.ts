@@ -81,3 +81,28 @@ export const auditEntrySchema = z.object({
   after: z.unknown().nullable(),
 });
 export type AuditEntry = z.infer<typeof auditEntrySchema>;
+
+// ── Access requests (D6) ──────────────────────────────────────────────────
+
+/** The Google identity that just failed the allowlist, as the server verified it. */
+export const accessRequestCurrentSchema = z.object({
+  name: z.string(),
+  email: z.email(),
+  /** true when this e-mail already has a request waiting for an admin. */
+  pending: z.boolean(),
+});
+export type AccessRequestCurrent = z.infer<typeof accessRequestCurrentSchema>;
+
+export const accessRequestCreatedSchema = z.object({
+  status: z.enum(['created', 'pending']),
+});
+
+export const accessRequestSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.email(),
+  requestedAt: z.iso.datetime(),
+  /** The e-mail belongs to a deactivated employee: approving reactivates them. */
+  deactivatedEmployee: z.boolean(),
+});
+export type AccessRequestDto = z.infer<typeof accessRequestSchema>;

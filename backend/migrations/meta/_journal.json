@@ -29,6 +29,20 @@
       "when": 1791489154805,
       "tag": "0003_marcaciones_seguridad",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791503948876,
+      "tag": "0004_solicitudes_de_acceso",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791503951832,
+      "tag": "0005_solicitudes_de_acceso_permisos",
+      "breakpoints": true
     }
   ]
 }
