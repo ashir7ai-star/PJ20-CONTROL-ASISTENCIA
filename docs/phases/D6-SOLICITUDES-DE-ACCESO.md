@@ -1,6 +1,6 @@
 # D6 — Solicitudes de acceso · Plan detallado
 
-> Estado: ✅ **implementado** · 2026-10-09 (falta la prueba manual en celular)
+> Estado: ✅ **cerrado** · 2026-10-09
 > Reglas aplicables: `CLAUDE.md` §1 (Seguridad), §2.5 (Auditoría), §3 (Privacidad), §9 (Método)
 
 ## 1. Objetivo
@@ -76,4 +76,4 @@ Rama propia con PR. La migración solo agrega una tabla nueva.
   - un empleado no ve ni resuelve solicitudes.
 - **Comprobante:** cookie `__Host-pj20_solicitud` (HttpOnly, Secure, `SameSite=Strict`, 15 min); Redis guarda solo su hash, junto con el nombre y el correo verificados por Google.
 - **Panel:** sección «Solicitudes pendientes» en Empleados, con un número en la pestaña.
-- **Pendiente:** prueba manual en celular, de punta a punta, con una cuenta nueva.
+- **Prueba manual (2026-10-09):** el dueño la hizo de punta a punta en celulares reales: solicitud desde una cuenta nueva, aprobación en el panel e ingreso con esa cuenta. ✅
