@@ -43,6 +43,23 @@ export function clearNonceCookie(reply: FastifyReply): void {
 }
 
 /**
+ * Proof that this browser just failed the allowlist with a verified Google
+ * account (D6): lets that person request access for 15 minutes. Strict: it is
+ * only ever sent by the app itself.
+ */
+export const ACCESS_PROOF_COOKIE = '__Host-pj20_solicitud';
+const ACCESS_PROOF_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'strict',
+  path: '/',
+} as const;
+
+export function setAccessProofCookie(reply: FastifyReply, token: string, maxAge: number): void {
+  void reply.setCookie(ACCESS_PROOF_COOKIE, token, { ...ACCESS_PROOF_COOKIE_OPTIONS, maxAge });
+}
+
+/**
  * Per-route exception to the Origin check: only Google's sign-in redirect uses
  * it. Safari may send "null" for that cross-site POST; the nonce cookie above
  * is what actually ties the request to this browser.

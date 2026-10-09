@@ -17,6 +17,7 @@ import {
   real,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -140,5 +141,38 @@ export const attendanceRecords = pgTable(
     check('attendance_latitude_range', sql`${t.latitude} BETWEEN -90 AND 90`),
     check('attendance_longitude_range', sql`${t.longitude} BETWEEN -180 AND 180`),
     check('attendance_accuracy_positive', sql`${t.accuracyM} >= 0`),
+  ],
+);
+
+export const accessRequestStatusEnum = pgEnum('access_request_status', [
+  'pending',
+  'approved',
+  'rejected',
+]);
+
+/**
+ * Access requests from Google accounts that failed the allowlist (D6). Name and
+ * e-mail come from a server-verified Google ID token, never typed by hand.
+ * Resolved requests are deleted after 30 days (Ley 1581: minimum retention).
+ */
+export const accessRequests = pgTable(
+  'access_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    name: text('name').notNull(),
+    status: accessRequestStatusEnum('status').notNull().default('pending'),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    /** Snapshot of who resolved it (no FK: kept meaningful like the audit log). */
+    resolvedById: uuid('resolved_by_id'),
+    resolvedByName: text('resolved_by_name'),
+  },
+  (t) => [
+    check('access_requests_email_lowercase', sql`${t.email} = lower(${t.email})`),
+    // One open request per e-mail.
+    uniqueIndex('access_requests_one_pending_idx')
+      .on(t.email)
+      .where(sql`${t.status} = 'pending'`),
   ],
 );

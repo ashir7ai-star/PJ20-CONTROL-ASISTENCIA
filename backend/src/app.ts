@@ -17,6 +17,7 @@ import type { Redis } from 'ioredis';
 
 import { authPlugin } from './auth/plugin.js';
 import type { AuthDeps } from './auth/service.js';
+import type { AccessProofStore } from './access/proof.js';
 import type { PhotoStore } from './infra/photo-store.js';
 import { DomainError } from './errors.js';
 import { type HealthChecks, registerHealthRoutes } from './routes/health.js';
@@ -29,7 +30,12 @@ export interface AppOptions {
   /** Number of trusted reverse proxies in front of the API (Easypanel: 1). */
   trustProxy?: number | false;
   /** Mounts the authenticated API v1 when provided. */
-  api?: AuthDeps & { redis: Redis; photos: PhotoStore; authRateLimitMax?: number };
+  api?: AuthDeps & {
+    redis: Redis;
+    photos: PhotoStore;
+    accessProofs: AccessProofStore;
+    authRateLimitMax?: number;
+  };
   /** Serves the OpenAPI document (never in production). */
   exposeDocs?: boolean;
 }

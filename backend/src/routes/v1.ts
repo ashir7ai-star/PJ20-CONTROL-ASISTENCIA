@@ -3,6 +3,9 @@
  * zod, documented in OpenAPI) and its access level: public, session or admin.
  */
 import {
+  accessRequestCreatedSchema,
+  accessRequestCurrentSchema,
+  accessRequestSchema,
   adminAttendanceEntrySchema,
   attendanceStatusSchema,
   auditEntrySchema,
@@ -23,21 +26,31 @@ import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
 import {
+  ACCESS_PROOF_COOKIE,
   NONCE_COOKIE,
   SESSION_COOKIE,
   clearNonceCookie,
   clearSessionCookie,
   requireAdmin,
   requireSession,
+  setAccessProofCookie,
   setNonceCookie,
   setSessionCookie,
 } from '../auth/plugin.js';
 import { acceptConsent, type AuthDeps, currentUser, signInWithGoogle } from '../auth/service.js';
 import { hashToken, revokeSession } from '../auth/sessions.js';
+import { ACCESS_PROOF_TTL_SECONDS, type AccessProofStore } from '../access/proof.js';
+import {
+  approveRequest,
+  createRequest,
+  currentRequest,
+  listPending,
+  rejectRequest,
+} from '../access/service.js';
 import { attendanceStatus, listDay, markAttendance, readSelfie } from '../attendance/service.js';
 import { businessToday } from '../attendance/rules.js';
 import { auditLog } from '../db/schema.js';
-import { DomainError } from '../errors.js';
+import { AccountNotAuthorizedError, DomainError, errors } from '../errors.js';
 import type { PhotoStore } from '../infra/photo-store.js';
 import {
   createEmployee,
@@ -60,6 +73,7 @@ const AFTER_LOGIN = {
 
 export interface V1Options extends AuthDeps {
   photos: PhotoStore;
+  accessProofs: AccessProofStore;
   /**
    * Sign-in requests per minute per IP (CLAUDE.md §1.9). Generous on purpose:
    * a whole office signs in from ONE public IP (shared wifi), and there is no
@@ -126,6 +140,11 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
         setSessionCookie(reply, token, expiresAt);
         return await reply.redirect(AFTER_LOGIN.ok, 303);
       } catch (error) {
+        // Not on the allowlist: let THIS browser request access (D6).
+        if (error instanceof AccountNotAuthorizedError && error.identity) {
+          const proof = await deps.accessProofs.issue(error.identity);
+          setAccessProofCookie(reply, proof, ACCESS_PROOF_TTL_SECONDS);
+        }
         if (error instanceof DomainError) {
           return reply.redirect(
             error.code === 'ACCOUNT_NOT_AUTHORIZED'
@@ -165,6 +184,38 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
     clearSessionCookie(reply);
     return reply.code(204).send();
   });
+
+  // ── Access requests (D6) ────────────────────────────────────────────────
+  /** The verified identity behind this browser's proof cookie, or 404. */
+  const provenIdentity = async (request: FastifyRequest) => {
+    const token = request.cookies[ACCESS_PROOF_COOKIE];
+    const identity = token ? await deps.accessProofs.read(token) : null;
+    if (!identity) throw errors.notFound('La solicitud');
+    return identity;
+  };
+
+  app.get(
+    '/access-requests/current',
+    { schema: { tags: ['access'], response: { 200: accessRequestCurrentSchema } } },
+    async (request) => currentRequest(db, await provenIdentity(request)),
+  );
+
+  app.post(
+    '/access-requests',
+    {
+      config: AUTH_RATE_LIMIT,
+      schema: { tags: ['access'], response: { 200: accessRequestCreatedSchema } },
+    },
+    async (request) => {
+      const identity = await provenIdentity(request);
+      const status = await createRequest(db, identity, {
+        actor: { id: null, name: identity.email },
+        requestId: request.id,
+        ip: request.ip,
+      });
+      return { status };
+    },
+  );
 
   // ── Current user ────────────────────────────────────────────────────────
   app.get('/me', { schema: { tags: ['me'], response: { 200: meSchema } } }, async (request) =>
@@ -270,6 +321,35 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
     async (request, reply) => {
       const { me, audit } = adminContext(request);
       await deleteEmployee(db, request.params.id, me, audit);
+      return reply.code(204).send();
+    },
+  );
+
+  app.get(
+    '/admin/access-requests',
+    { schema: { tags: ['admin'], response: { 200: z.array(accessRequestSchema) } } },
+    async (request) => {
+      requireAdmin(request);
+      return listPending(db);
+    },
+  );
+
+  app.post(
+    '/admin/access-requests/:id/approve',
+    { schema: { tags: ['admin'], params: idParams } },
+    async (request, reply) => {
+      const { audit } = adminContext(request);
+      await approveRequest(db, request.params.id, audit);
+      return reply.code(204).send();
+    },
+  );
+
+  app.post(
+    '/admin/access-requests/:id/reject',
+    { schema: { tags: ['admin'], params: idParams } },
+    async (request, reply) => {
+      const { audit } = adminContext(request);
+      await rejectRequest(db, request.params.id, audit);
       return reply.code(204).send();
     },
   );

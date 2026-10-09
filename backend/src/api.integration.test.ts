@@ -13,9 +13,10 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildApp } from './app.js';
-import { NONCE_COOKIE, SESSION_COOKIE } from './auth/plugin.js';
+import { ACCESS_PROOF_COOKIE, NONCE_COOKIE, SESSION_COOKIE } from './auth/plugin.js';
 import { createGoogleVerifier } from './auth/google.js';
 import { createNonceStore } from './auth/nonce.js';
+import { createAccessProofStore } from './access/proof.js';
 import { createDatabase } from './db/client.js';
 import { createPhotoStore, type PhotoStore } from './infra/photo-store.js';
 import { createStorageClient, ensureBucket } from './infra/storage.js';
@@ -53,6 +54,7 @@ async function makeApp(authRateLimitMax = 1000) {
       ),
       nonces: createNonceStore(redis),
       photos,
+      accessProofs: createAccessProofStore(redis),
       authRateLimitMax,
     },
   });
@@ -327,6 +329,117 @@ describe('inicio de sesión por redirección (D5, iPhone)', () => {
       'https://sitio-malicioso.com',
     );
     expect(res.statusCode).toBe(403);
+  });
+});
+
+describe('solicitudes de acceso (D6)', () => {
+  /** Unknown account goes through Google's redirect: returns the proof cookie. */
+  async function failedSignIn(email: string) {
+    const nonceRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/nonce',
+      headers: { origin: ORIGIN },
+    });
+    const nonceCookie = nonceRes.cookies.find((c) => c.name === NONCE_COOKIE);
+    const { nonce } = nonceRes.json<{ nonce: string }>();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/google/redirect',
+      headers: {
+        origin: 'https://accounts.google.com',
+        'content-type': 'application/x-www-form-urlencoded',
+        cookie: `${NONCE_COOKIE}=${nonceCookie?.value ?? ''}`,
+      },
+      payload: new URLSearchParams({ credential: await googleToken(email, nonce) }).toString(),
+    });
+    expect(res.headers.location).toBe('/?acceso=no-autorizada');
+    const proof = res.cookies.find((c) => c.name === ACCESS_PROOF_COOKIE);
+    if (!proof) throw new Error('sin comprobante');
+    expect(proof).toMatchObject({ httpOnly: true, secure: true, sameSite: 'Strict' });
+    return `${ACCESS_PROOF_COOKIE}=${proof.value}`;
+  }
+
+  it('sin comprobante nadie puede pedir acceso (ni consultar)', async () => {
+    expect((await call('POST', '/access-requests')).statusCode).toBe(404);
+    expect((await call('GET', '/access-requests/current')).statusCode).toBe(404);
+    const forged = `${ACCESS_PROOF_COOKIE}=${'a'.repeat(43)}`;
+    expect((await call('POST', '/access-requests', forged)).statusCode).toBe(404);
+  });
+
+  it('con el comprobante pide acceso con el nombre y correo verificados por Google; no se duplica', async () => {
+    const email = unique('aspirante');
+    const proof = await failedSignIn(email);
+    expect((await call('GET', '/access-requests/current', proof)).json()).toEqual({
+      name: 'Nombre en Google',
+      email,
+      pending: false,
+    });
+    expect((await call('POST', '/access-requests', proof)).json()).toEqual({ status: 'created' });
+    expect((await call('POST', '/access-requests', proof)).json()).toEqual({ status: 'pending' });
+    expect(
+      (await call('GET', '/access-requests/current', proof)).json<{ pending: boolean }>().pending,
+    ).toBe(true);
+  });
+
+  it('aprobar crea al empleado y ya puede iniciar sesión; queda en la auditoría', async () => {
+    const email = unique('aprobado');
+    await call('POST', '/access-requests', await failedSignIn(email));
+    const admin = await loggedIn('admin');
+    const pending = await call('GET', '/admin/access-requests', admin.cookie);
+    const request = pending.json<{ id: string; email: string }[]>().find((r) => r.email === email);
+    if (!request) throw new Error('no aparece la solicitud');
+
+    const approved = await call(
+      'POST',
+      `/admin/access-requests/${request.id}/approve`,
+      admin.cookie,
+    );
+    expect(approved.statusCode).toBe(204);
+    expect((await login(email)).statusCode).toBe(200);
+
+    const again = await call('POST', `/admin/access-requests/${request.id}/approve`, admin.cookie);
+    expect(again.statusCode).toBe(409);
+    const audit = await call('GET', '/admin/audit?limit=20', admin.cookie);
+    expect(audit.json<{ action: string }[]>().map((a) => a.action)).toContain(
+      'access_request.approved',
+    );
+  });
+
+  it('aprobar a un empleado desactivado lo reactiva', async () => {
+    const admin = await loggedIn('admin');
+    const former = await addUser('employee');
+    await call('PATCH', `/admin/employees/${former.id}`, admin.cookie, { active: false });
+    await call('POST', '/access-requests', await failedSignIn(former.email));
+    const list = await call('GET', '/admin/access-requests', admin.cookie);
+    const request = list
+      .json<{ id: string; email: string; deactivatedEmployee: boolean }[]>()
+      .find((r) => r.email === former.email);
+    expect(request?.deactivatedEmployee).toBe(true);
+    await call('POST', `/admin/access-requests/${request?.id ?? ''}/approve`, admin.cookie);
+    expect((await login(former.email)).statusCode).toBe(200);
+  });
+
+  it('rechazar deja a la persona sin acceso', async () => {
+    const email = unique('rechazado');
+    await call('POST', '/access-requests', await failedSignIn(email));
+    const admin = await loggedIn('admin');
+    const list = await call('GET', '/admin/access-requests', admin.cookie);
+    const request = list.json<{ id: string; email: string }[]>().find((r) => r.email === email);
+    const res = await call(
+      'POST',
+      `/admin/access-requests/${request?.id ?? ''}/reject`,
+      admin.cookie,
+    );
+    expect(res.statusCode).toBe(204);
+    expect((await login(email)).statusCode).toBe(403);
+  });
+
+  it('un empleado no ve ni resuelve solicitudes', async () => {
+    const { cookie } = await loggedIn('employee');
+    expect((await call('GET', '/admin/access-requests', cookie)).statusCode).toBe(403);
+    expect(
+      (await call('POST', `/admin/access-requests/${randomUUID()}/approve`, cookie)).statusCode,
+    ).toBe(403);
   });
 });
 
