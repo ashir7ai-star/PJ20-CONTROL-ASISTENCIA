@@ -3,24 +3,25 @@
  * live data. Every change goes to the server, which applies the same shared
  * rules (last admin, self-demotion, history) with row locks and audits it.
  */
-import type { EmployeeDto, Me, UserAction } from '@pj20/shared';
+import type { AccessRequestDto, EmployeeDto, Me, UserAction } from '@pj20/shared';
 import { useCallback, useEffect, useState } from 'react';
 
 import { api, ApiRequestError } from '../../api/client.js';
 import { Button } from '../../components/ui/button.js';
 import { Card } from '../../components/ui/card.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
-import { AdminShell } from './admin-shell.js';
+import { AccessRequestsSection } from './access-requests-section.js';
+import { AdminShell, type ShellTools } from './admin-shell.js';
 import type { Employee, Role } from './model.js';
 import { EmployeesScreen } from './screens/employees-screen.js';
 
 export function EmployeesPage() {
-  return <AdminShell>{(me) => <EmployeesContent me={me} />}</AdminShell>;
+  return <AdminShell>{(me, tools) => <EmployeesContent me={me} tools={tools} />}</AdminShell>;
 }
 
 type Load =
   | { kind: 'loading' }
-  | { kind: 'ready'; rows: EmployeeDto[] }
+  | { kind: 'ready'; rows: EmployeeDto[]; requests: AccessRequestDto[] }
   | { kind: 'failed'; message: string };
 
 /** Devices are linked in Fase 4; until then nobody has one. */
@@ -60,15 +61,18 @@ function reason(error: unknown): Error {
   return new Error('No se pudo guardar. Inténtalo de nuevo.');
 }
 
-function EmployeesContent({ me }: { me: Me }) {
+function EmployeesContent({ me, tools }: { me: Me; tools: ShellTools }) {
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    api<EmployeeDto[]>('/admin/employees').then(
-      (rows) => {
-        if (!cancelled) setLoad({ kind: 'ready', rows });
+    Promise.all([
+      api<EmployeeDto[]>('/admin/employees'),
+      api<AccessRequestDto[]>('/admin/access-requests'),
+    ]).then(
+      ([rows, requests]) => {
+        if (!cancelled) setLoad({ kind: 'ready', rows, requests });
       },
       (error: unknown) => {
         if (!cancelled) setLoad({ kind: 'failed', message: reason(error).message });
@@ -121,26 +125,40 @@ function EmployeesContent({ me }: { me: Me }) {
   };
 
   return (
-    <EmployeesScreen
-      employees={employees}
-      me={self}
-      recordCountById={new Map(load.rows.map((r) => [r.id, r.recordCount]))}
-      onAdd={async (employee: { name: string; email: string; role: Role }) => {
-        try {
-          await api('/admin/employees', { method: 'POST', body: employee });
-        } catch (error) {
-          throw reason(error);
-        }
-        reload();
-      }}
-      onAction={async (id, action) => {
-        try {
-          await applyOnServer(id, action);
-        } catch (error) {
-          throw reason(error);
-        }
-        reload();
-      }}
-    />
+    <>
+      <AccessRequestsSection
+        requests={load.requests}
+        onResolve={async (id, decision) => {
+          try {
+            await api(`/admin/access-requests/${id}/${decision}`, { method: 'POST' });
+          } catch (error) {
+            throw reason(error);
+          }
+          reload();
+          tools.refreshCounts();
+        }}
+      />
+      <EmployeesScreen
+        employees={employees}
+        me={self}
+        recordCountById={new Map(load.rows.map((r) => [r.id, r.recordCount]))}
+        onAdd={async (employee: { name: string; email: string; role: Role }) => {
+          try {
+            await api('/admin/employees', { method: 'POST', body: employee });
+          } catch (error) {
+            throw reason(error);
+          }
+          reload();
+        }}
+        onAction={async (id, action) => {
+          try {
+            await applyOnServer(id, action);
+          } catch (error) {
+            throw reason(error);
+          }
+          reload();
+        }}
+      />
+    </>
   );
 }

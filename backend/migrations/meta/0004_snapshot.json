@@ -227,12 +227,8 @@
           "name": "attendance_records_employee_id_employees_id_fk",
           "tableFrom": "attendance_records",
           "tableTo": "employees",
-          "columnsFrom": [
-            "employee_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -423,12 +419,8 @@
           "name": "consents_employee_id_employees_id_fk",
           "tableFrom": "consents",
           "tableTo": "employees",
-          "columnsFrom": [
-            "employee_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -499,9 +491,7 @@
         "employees_email_unique": {
           "name": "employees_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -597,12 +587,8 @@
           "name": "sessions_employee_id_employees_id_fk",
           "tableFrom": "sessions",
           "tableTo": "employees",
-          "columnsFrom": [
-            "employee_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -612,9 +598,7 @@
         "sessions_token_hash_unique": {
           "name": "sessions_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -626,35 +610,22 @@
     "public.access_request_status": {
       "name": "access_request_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "rejected"
-      ]
+      "values": ["pending", "approved", "rejected"]
     },
     "public.attendance_kind": {
       "name": "attendance_kind",
       "schema": "public",
-      "values": [
-        "check_in",
-        "check_out"
-      ]
+      "values": ["check_in", "check_out"]
     },
     "public.review_status": {
       "name": "review_status",
       "schema": "public",
-      "values": [
-        "ok",
-        "pending"
-      ]
+      "values": ["ok", "pending"]
     },
     "public.role": {
       "name": "role",
       "schema": "public",
-      "values": [
-        "employee",
-        "admin"
-      ]
+      "values": ["employee", "admin"]
     }
   },
   "schemas": {},

@@ -5,7 +5,9 @@ import {
   type LucideIcon,
   MapPinOff,
   ShieldAlert,
+  Send,
   ShieldX,
+  UserPlus,
   UserX,
   Signal,
   Smartphone,
@@ -27,6 +29,9 @@ export const problemKinds = [
   'android-browser',
   'not-authorized',
   'mark-failed',
+  'access-request',
+  'access-sent',
+  'access-pending',
 ] as const;
 
 export type ProblemKind = (typeof problemKinds)[number];
@@ -119,6 +124,30 @@ export const problems: Record<ProblemKind, ProblemContent> = {
     primary: 'Intentar de nuevo',
     secondary: 'Volver',
   },
+  // D6: the body names the Google account the server verified.
+  'access-request': {
+    icon: UserPlus,
+    tone: 'info',
+    title: 'Tu cuenta no está autorizada',
+    body: 'Si debes usar esta aplicación, pide acceso a tu administrador.',
+    primary: 'Solicitar acceso',
+    secondary: 'Usar otra cuenta',
+    note: 'Enviaremos tu nombre y tu correo de Google a BLAZAR ENERGY para revisar tu solicitud.',
+  },
+  'access-sent': {
+    icon: Send,
+    tone: 'info',
+    title: 'Solicitud enviada',
+    body: 'Tu administrador la revisará. Cuando la apruebe, entra con el botón «Continuar con Google».',
+    primary: 'Entendido',
+  },
+  'access-pending': {
+    icon: Clock,
+    tone: 'info',
+    title: 'Tu solicitud está pendiente',
+    body: 'Tu administrador aún no la ha revisado. Cuando la apruebe, entra con el botón «Continuar con Google».',
+    primary: 'Usar otra cuenta',
+  },
 };
 
 const toneStyles: Record<Tone, string> = {
@@ -131,11 +160,19 @@ interface ProblemScreenProps {
   kind: ProblemKind;
   /** Replaces the default explanation (e.g. exact accuracy, iPhone vs Android steps). */
   body?: string;
+  /** The primary action is in progress (shows a spinner, prevents double taps). */
+  busy?: boolean;
   onPrimary?: () => void;
   onSecondary?: () => void;
 }
 
-export function ProblemScreen({ kind, body, onPrimary, onSecondary }: ProblemScreenProps) {
+export function ProblemScreen({
+  kind,
+  body,
+  busy = false,
+  onPrimary,
+  onSecondary,
+}: ProblemScreenProps) {
   const content = problems[kind];
   const Icon = content.icon;
   return (
@@ -163,7 +200,7 @@ export function ProblemScreen({ kind, body, onPrimary, onSecondary }: ProblemScr
       </section>
 
       <div className="mt-auto flex flex-col gap-3 pt-10">
-        <Button size="lg" block onClick={onPrimary}>
+        <Button size="lg" block loading={busy} onClick={onPrimary}>
           {content.primary}
         </Button>
         {/* Never a button without an action. */}
