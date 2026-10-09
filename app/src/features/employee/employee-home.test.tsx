@@ -30,6 +30,7 @@ const me: Me = {
   email: 'laura@gmail.com',
   role: 'employee',
   consentRequired: false,
+  selfieAuthorized: true,
 };
 
 const goodFix: Fix = {
@@ -97,7 +98,14 @@ afterEach(() => {
 const onSessionExpired = vi.fn();
 
 function renderHome() {
-  render(<EmployeeHome me={me} onLogout={vi.fn()} onSessionExpired={onSessionExpired} />);
+  render(
+    <EmployeeHome
+      me={me}
+      onMeChange={vi.fn()}
+      onLogout={vi.fn()}
+      onSessionExpired={onSessionExpired}
+    />,
+  );
 }
 
 async function startMarking() {
@@ -247,5 +255,64 @@ describe('Marcar con datos reales', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
     expect(await screen.findByRole('button', { name: /Marcar entrada/ })).toBeInTheDocument();
     expect(sent).toBeUndefined();
+  });
+
+  it('sin autorización de selfie marca solo con ubicación: nunca abre la cámara (D7)', async () => {
+    localStorage.setItem('pj20.permisos-explicados', '1');
+    markReply = {
+      status: 201,
+      json: {
+        id: '0b0b0b0b-1a2b-4c3d-8e9f-0a1b2c3d4e5f',
+        kind: 'check_in',
+        serverTime: SERVER_TIME,
+        accuracyM: 8,
+        reviewStatus: 'ok',
+        reviewReasons: [],
+        withSelfie: false,
+      },
+    };
+    render(
+      <EmployeeHome
+        me={{ ...me, selfieAuthorized: false }}
+        onMeChange={vi.fn()}
+        onLogout={vi.fn()}
+        onSessionExpired={onSessionExpired}
+      />,
+    );
+    expect(await screen.findByText('Sin selfie')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Marcar entrada/ }));
+    expect(await screen.findByRole('heading', { name: 'Entrada registrada' })).toBeInTheDocument();
+    expect(openFrontCamera).not.toHaveBeenCalled();
+    expect(sent).not.toHaveProperty('photo');
+    expect(screen.getByText('No autorizada')).toBeInTheDocument();
+  });
+
+  it('desde el menú de la cuenta puede retirar la autorización de la selfie', async () => {
+    const onMeChange = vi.fn();
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (url === '/api/v1/attendance/status') return respond(status);
+      if (url === '/api/v1/me/selfie-authorization' && init?.method === 'PUT') {
+        expect(init.body).toBe(JSON.stringify({ authorized: false }));
+        return respond({ status: 200, json: { ...me, selfieAuthorized: false } });
+      }
+      return Promise.reject(new Error(`Ruta no simulada: ${url}`));
+    });
+    render(
+      <EmployeeHome
+        me={me}
+        onMeChange={onMeChange}
+        onLogout={vi.fn()}
+        onSessionExpired={onSessionExpired}
+      />,
+    );
+    fireEvent.keyDown(await screen.findByRole('button', { name: 'Cuenta y apariencia' }), {
+      key: 'Enter',
+    });
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Autorización de selfie' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Retirar autorización' }));
+    await vi.waitFor(() => {
+      expect(onMeChange).toHaveBeenCalledWith(expect.objectContaining({ selfieAuthorized: false }));
+    });
   });
 });

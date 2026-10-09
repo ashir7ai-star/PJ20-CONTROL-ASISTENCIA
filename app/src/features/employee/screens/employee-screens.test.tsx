@@ -81,16 +81,34 @@ describe('Marcar', () => {
 });
 
 describe('Consentimiento', () => {
-  it('no permite continuar sin aceptar', () => {
+  it('exige aceptar el tratamiento Y decidir aparte sobre la selfie (D7)', () => {
     const onAccept = vi.fn();
     render(<ConsentScreen onAccept={onAccept} />);
     const button = screen.getByRole('button', { name: 'Aceptar y continuar' });
     expect(button).toBeDisabled();
 
     fireEvent.click(screen.getByRole('checkbox'));
+    expect(button).toBeDisabled(); // the selfie decision is still missing
+    fireEvent.click(screen.getByRole('radio', { name: 'No autorizo la selfie' }));
     expect(button).toBeEnabled();
     fireEvent.click(button);
-    expect(onAccept).toHaveBeenCalledOnce();
+    expect(onAccept).toHaveBeenCalledWith(false);
+  });
+
+  it('informa que la selfie es un dato sensible y que no está obligado a autorizarla', () => {
+    render(<ConsentScreen />);
+    expect(screen.getByText(/Selfie al marcar · opcional/)).toBeInTheDocument();
+    expect(screen.getByText(/No estás obligado a autorizarla/)).toBeInTheDocument();
+    expect(screen.getByText(/se borra a los 90 días/)).toBeInTheDocument();
+  });
+
+  it('en modo «solo selfie» pide únicamente esa decisión', () => {
+    const onAccept = vi.fn();
+    render(<ConsentScreen mode="selfie-only" onAccept={onAccept} />);
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: 'Sí, autorizo la selfie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar mi decisión' }));
+    expect(onAccept).toHaveBeenCalledWith(true);
   });
 
   it('menciona la Ley 1581 y la versión del texto', () => {
@@ -132,7 +150,7 @@ describe('Selfie', () => {
 
   it('el consentimiento informa que la foto incluye el lugar', () => {
     render(<ConsentScreen />);
-    expect(screen.getByText(/Muestra tu rostro y el lugar donde estás/)).toBeInTheDocument();
+    expect(screen.getByText(/tu rostro y del lugar donde estás/)).toBeInTheDocument();
   });
 });
 

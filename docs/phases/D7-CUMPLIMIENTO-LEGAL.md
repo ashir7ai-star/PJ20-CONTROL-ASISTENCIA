@@ -1,6 +1,6 @@
 # D7 — Cumplimiento legal antes del uso real · Plan detallado
 
-> Estado: **aprobado** · en ejecución · 2026-10-09
+> Estado: ✅ **implementado** · 2026-10-09 (pendiente: despliegue y reinicio de datos)
 > Reglas aplicables: `CLAUDE.md` §3 (Privacidad), §2B.6 (Selfie), §9 (Método)
 > **Aviso:** investigación técnica sobre normas públicas vigentes a octubre de 2026, **no asesoría jurídica**. Se recomienda que un abogado la revise cuando sea posible.
 

@@ -8,12 +8,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, ApiRequestError } from '../../api/client.js';
 import { AppLoading } from '../../components/brand/app-loading.js';
 import { MarkFlow } from './mark-flow.js';
+import { SelfieSettings } from './selfie-settings.js';
 import { type EmployeeView, nextAction } from './model.js';
 import { ClockScreen } from './screens/clock-screen.js';
 import { ProblemScreen } from './screens/problem-screen.js';
 
 interface EmployeeHomeProps {
   me: Me;
+  /** The server returned an updated user (e.g. a new selfie decision). */
+  onMeChange: (me: Me) => void;
   onLogout: () => void;
   onSessionExpired: () => void;
   /** Only for administrators. */
@@ -39,9 +42,17 @@ function toView(me: Me, status: AttendanceStatus): EmployeeView {
   };
 }
 
-export function EmployeeHome({ me, onLogout, onSessionExpired, onOpenAdmin }: EmployeeHomeProps) {
+export function EmployeeHome({
+  me,
+  onMeChange,
+  onLogout,
+  onSessionExpired,
+  onOpenAdmin,
+}: EmployeeHomeProps) {
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [marking, setMarking] = useState(false);
+  const [selfieSettings, setSelfieSettings] = useState(false);
+  const withSelfie = me.selfieAuthorized === true;
   // Incrementing re-reads the status (on start, after marking, on retry).
   const [refresh, setRefresh] = useState(0);
   const reload = useCallback(() => {
@@ -87,6 +98,7 @@ export function EmployeeHome({ me, onLogout, onSessionExpired, onOpenAdmin }: Em
     return (
       <MarkFlow
         kind={nextAction(view.shift)}
+        withSelfie={withSelfie}
         onSessionExpired={onSessionExpired}
         onClose={(marked) => {
           setMarking(false);
@@ -96,13 +108,27 @@ export function EmployeeHome({ me, onLogout, onSessionExpired, onOpenAdmin }: Em
     );
   }
   return (
-    <ClockScreen
-      view={view}
-      onMark={() => {
-        setMarking(true);
-      }}
-      onLogout={onLogout}
-      {...(onOpenAdmin ? { onOpenAdmin } : {})}
-    />
+    <>
+      <ClockScreen
+        view={view}
+        withSelfie={withSelfie}
+        onMark={() => {
+          setMarking(true);
+        }}
+        onLogout={onLogout}
+        onSelfieSettings={() => {
+          setSelfieSettings(true);
+        }}
+        {...(onOpenAdmin ? { onOpenAdmin } : {})}
+      />
+      <SelfieSettings
+        authorized={withSelfie}
+        open={selfieSettings}
+        onClose={() => {
+          setSelfieSettings(false);
+        }}
+        onChanged={onMeChange}
+      />
+    </>
   );
 }

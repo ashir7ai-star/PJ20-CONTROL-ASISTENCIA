@@ -13,6 +13,7 @@ const me: Me = {
   email: 'nathan@ylevigroup.com',
   role: 'admin',
   consentRequired: false,
+  selfieAuthorized: true,
 };
 
 const row = (over: Partial<EmployeeDto>): EmployeeDto => ({

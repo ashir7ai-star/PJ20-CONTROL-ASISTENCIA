@@ -23,6 +23,10 @@ interface ClockScreenProps {
   onOpenAdmin?: () => void;
   /** Real app: shows "Cerrar sesión" in the account menu. */
   onLogout?: () => void;
+  /** Real app: "Autorización de selfie" in the account menu (D7). */
+  onSelfieSettings?: () => void;
+  /** false: the employee did not authorize the selfie and marks without it (D7). */
+  withSelfie?: boolean;
 }
 
 /** Main employee screen ("Marcar"): live clock, shift status and the Pulso button. */
@@ -32,6 +36,8 @@ export function ClockScreen({
   onMark,
   onOpenAdmin,
   onLogout,
+  onSelfieSettings,
+  withSelfie = true,
 }: ClockScreenProps) {
   const now = useNow('minute', fixedNow);
   const clock = formatClock(now);
@@ -39,7 +45,14 @@ export function ClockScreen({
   const searching = view.location.state === 'searching';
 
   return (
-    <EmployeeLayout topRight={<ThemeMenu {...(onLogout ? { onLogout } : {})} />}>
+    <EmployeeLayout
+      topRight={
+        <ThemeMenu
+          {...(onLogout ? { onLogout } : {})}
+          {...(onSelfieSettings ? { onSelfieSettings } : {})}
+        />
+      }
+    >
       <section className="mt-10 flex flex-col items-center text-center" aria-label="Hora actual">
         <p className="text-[15px] text-ink-muted">
           Hola, {view.firstName} · {formatLongDate(now)}
@@ -83,7 +96,7 @@ export function ClockScreen({
           </li>
           <li className="inline-flex items-center gap-1.5">
             <Camera className="size-4" aria-hidden="true" />
-            Selfie al marcar
+            {withSelfie ? 'Selfie al marcar' : 'Sin selfie'}
           </li>
         </ul>
         {onOpenAdmin && (

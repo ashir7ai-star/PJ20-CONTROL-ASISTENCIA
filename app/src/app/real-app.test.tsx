@@ -13,6 +13,7 @@ const laura: Me = {
   email: 'laura@gmail.com',
   role: 'employee',
   consentRequired: false,
+  selfieAuthorized: true,
 };
 
 type Handler = (body: unknown) => { status: number; json?: unknown };
@@ -112,7 +113,8 @@ describe('app real: sesión → consentimiento → Marcar', () => {
   it('al volver de Google con sesión abierta pide el consentimiento y luego muestra Marcar', async () => {
     let consented = false;
     routes['GET /api/v1/me'] = () => ({ status: 200, json: { ...laura, consentRequired: true } });
-    routes['POST /api/v1/me/consent'] = () => {
+    routes['POST /api/v1/me/consent'] = (body) => {
+      expect(body).toMatchObject({ selfie: true });
       consented = true;
       return { status: 204 };
     };
@@ -123,6 +125,7 @@ describe('app real: sesión → consentimiento → Marcar', () => {
 
     routes['GET /api/v1/me'] = () => ({ status: 200, json: laura });
     fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('radio', { name: 'Sí, autorizo la selfie' }));
     fireEvent.click(screen.getByRole('button', { name: 'Aceptar y continuar' }));
 
     expect(await screen.findByText(/Hola, Laura/)).toBeInTheDocument();
@@ -186,5 +189,20 @@ describe('app real: sesión → consentimiento → Marcar', () => {
     vi.mocked(globalThis.fetch).mockRejectedValue(new TypeError('offline'));
     renderApp();
     expect(await screen.findByRole('alert')).toHaveTextContent('Sin conexión a internet');
+  });
+
+  it('quien aceptó antes de que la selfie fuera opcional decide ahora sobre ella', async () => {
+    routes['GET /api/v1/me'] = () => ({ status: 200, json: { ...laura, selfieAuthorized: null } });
+    routes['PUT /api/v1/me/selfie-authorization'] = (body) => {
+      expect(body).toEqual({ authorized: false });
+      return { status: 200, json: { ...laura, selfieAuthorized: false } };
+    };
+    renderApp();
+    expect(
+      await screen.findByRole('heading', { name: 'Tu decisión sobre la selfie' }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'No autorizo la selfie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar mi decisión' }));
+    expect(await screen.findByText(/Hola, Laura/)).toBeInTheDocument();
   });
 });

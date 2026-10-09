@@ -23,10 +23,17 @@ describe('Política de Tratamiento de Datos', () => {
     expect(screen.getByText(/No rastreamos tu ubicación/)).toBeInTheDocument();
   });
 
-  it('advierte que es un borrador y marca los datos de la empresa por completar', () => {
+  it('es la versión final: sin borrador, con domicilio en Cali y los plazos de conservación', () => {
     render(<PrivacyPolicyPage />);
-    expect(screen.getByText(/Borrador pendiente de revisión legal/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Por completar:/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText(/Borrador/)).toBeNull();
+    expect(screen.queryByText(/Por completar/)).toBeNull();
+    expect(screen.getByText(/Cali, Valle del Cauca, Colombia/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no estás obligado a autorizar el tratamiento de datos sensibles/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Si no la autorizas:/)).toBeInTheDocument();
+    expect(screen.getAllByText(/90 días/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/3 años después/)).toBeInTheDocument();
     expect(screen.getByText(/NIT: 901.724.892-9/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'nathan@ylevigroup.com' })).toHaveAttribute(
       'href',
