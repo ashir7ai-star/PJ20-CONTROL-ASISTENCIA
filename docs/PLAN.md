@@ -122,15 +122,17 @@ Cada fase termina con: verificación completa (lint, typecheck, pruebas, build, 
 
 ## Registro de estado
 
-| Fase                     | Estado              |
-| ------------------------ | ------------------- |
-| 0 — Fundaciones          | ✅ Cerrada          |
-| 1 — Diseño               | ✅ Cerrada · v0.2.0 |
-| 2 — Backend núcleo       | ✅ Cerrada · v0.3.0 |
-| 2B — Staging (Easypanel) | ✅ Cerrada          |
-| 3 — App empleado         | ✅ Cerrada · v0.4.0 |
-| 4 — Antifraude servidor  | Pendiente           |
-| 5 — APK Android          | Pendiente           |
-| 6 — Panel administrativo | Pendiente           |
-| 7 — Despliegue y piloto  | Pendiente           |
-| 8 — Producción           | Pendiente           |
+| Fase                          | Estado                                           |
+| ----------------------------- | ------------------------------------------------ |
+| 0 — Fundaciones               | ✅ Cerrada                                       |
+| 1 — Diseño                    | ✅ Cerrada · v0.2.0                              |
+| 2 — Backend núcleo            | ✅ Cerrada · v0.3.0                              |
+| 2B — Staging (Easypanel)      | ✅ Cerrada                                       |
+| 3 — App empleado              | ✅ Cerrada · v0.4.0                              |
+| D5–D7 — iPhone, acceso, legal | ✅ Cerradas · v1.0.0                             |
+| D8 — Copias de seguridad      | ✅ Cerrada (Drive cifrado, restauración probada) |
+| 4 — Antifraude servidor       | Pendiente                                        |
+| 5 — APK Android               | Pendiente                                        |
+| 6 — Panel administrativo      | Pendiente                                        |
+| 7 — Despliegue y piloto       | Pendiente                                        |
+| 8 — Producción                | Pendiente                                        |

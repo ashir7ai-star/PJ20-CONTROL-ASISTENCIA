@@ -1,6 +1,6 @@
 # D8 — Copias de seguridad fuera del servidor · Plan detallado
 
-> Estado: **aprobado** (2026-10-10) · versión 2: Google Drive de nathan@ylevigroup.com (carpeta propia, cifrada, permiso solo sobre sus propios archivos) · en ejecución
+> Estado: ✅ **cerrado** · 2026-10-10 (Google Drive de nathan@ylevigroup.com, cifrado, restauración probada en producción)
 > Reglas aplicables: `CLAUDE.md` §1.13 (respaldos diarios fuera del VPS, restauración probada), §3 (Privacidad), §6.3 (nunca dumps en Git), §9 (Método)
 
 ## 1. Objetivo
@@ -58,11 +58,11 @@ Un servicio nuevo en Easypanel, **`pj20-asistencia-respaldos`**, construido desd
 
 ## 7. Criterios de aceptación
 
-- [ ] Copia diaria y mensual de la base de datos cifrada en Drive.
-- [ ] Espejo de selfies cifrado en Drive; lo borrado por conservación también desaparece de la copia.
-- [ ] El panel muestra la última copia buena y alerta si pasan 36 horas.
-- [ ] Restauración probada en un Postgres temporal, con los conteos iguales a los de la base real.
-- [ ] Guía de recuperación escrita y política actualizada.
+- [x] Copia diaria y mensual de la base de datos cifrada en Drive. _(Primera copia: 2026-10-10, 32 KB.)_
+- [x] Espejo de selfies cifrado en Drive; lo borrado por conservación también desaparece de la copia. _(Verificado en local y en CI.)_
+- [x] El panel muestra la última copia buena y alerta si pasan 36 horas.
+- [x] Restauración probada en producción (2026-10-10), en una base temporal: conteos idénticos a los de la base real.
+- [x] Guía de recuperación escrita y política actualizada.
 
 ## 8. Riesgos
 
@@ -74,3 +74,13 @@ Un servicio nuevo en Easypanel, **`pj20-asistencia-respaldos`**, construido desd
 | Alguien entra a la cuenta de Drive        | Los archivos están cifrados; cuenta dedicada con verificación en dos pasos            |
 
 **Reversión:** detener el servicio `pj20-asistencia-respaldos`. Las copias en Drive se borran a mano si se desea.
+
+## 9. Informe de ejecución (2026-10-10)
+
+- Desplegado en Easypanel como `pj20-asistencia-respaldos`. Primera copia: base de datos de 32 KB y 2 selfies, cifradas en Google Drive.
+- **Restauración probada en producción:** la copia descargada de Drive y restaurada en una base temporal es idéntica a la real en todas las tablas.
+- **Tres problemas resueltos al desplegar:**
+  - con el alcance `drive.file`, `rclone authorize` entrega el permiso en dos capas base64 (`config_token`);
+  - rclone lee por sí mismo cualquier variable `RCLONE_DRIVE_*` y usaba el permiso aún codificado; la variable ahora se llama `PERMISO_DRIVE` y la antigua se retira antes de llamar a rclone;
+  - `COPY --chmod` dejaba `/app` sin permiso de acceso.
+- **Verificación automática:** el CI hace en cada cambio una copia cifrada real, la restaura en otra base y compara los conteos.

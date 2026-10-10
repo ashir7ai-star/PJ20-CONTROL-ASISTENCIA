@@ -111,6 +111,6 @@ restaurar fotos
 
 ## Registro de pruebas de restauración
 
-| Fecha | Copia restaurada | Resultado | Quién |
-| ----- | ---------------- | --------- | ----- |
-|       |                  |           |       |
+| Fecha      | Copia restaurada                                   | Resultado                                                                                                                                   | Quién         |
+| ---------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| 2026-10-10 | `diaria/pj20-2026-10-10.dump` (desde Google Drive) | ✅ Idéntica a la base real: 3 empleados, 4 marcaciones, 2 consentimientos, 2 decisiones de selfie, 2 solicitudes, 17 registros de auditoría | Dueño, guiado |
