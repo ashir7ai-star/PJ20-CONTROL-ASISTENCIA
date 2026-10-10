@@ -12,6 +12,7 @@ import { type ReactNode, useMemo, useState } from 'react';
 
 import { Avatar } from '../../../components/ui/avatar.js';
 import { Button } from '../../../components/ui/button.js';
+import { ErrorNote } from '../../../components/ui/error-note.js';
 import { Field, SearchInput, Select, TextInput } from '../../../components/ui/field.js';
 import { Sheet } from '../../../components/ui/sheet.js';
 import { StatusBadge } from '../../../components/ui/status-badge.js';
@@ -439,20 +440,5 @@ function ConfirmActionSheet({
       <p className="text-[15px] leading-relaxed">{blocked ?? copy.body(employee)}</p>
       {error && <ErrorNote message={error} className="mt-4" />}
     </Sheet>
-  );
-}
-
-/** The server's reason, in Spanish (duplicate e-mail, last admin, …). */
-function ErrorNote({ message, className }: { message: string; className?: string }) {
-  return (
-    <p
-      role="alert"
-      className={cn(
-        'rounded-2xl bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger',
-        className,
-      )}
-    >
-      {message}
-    </p>
   );
 }

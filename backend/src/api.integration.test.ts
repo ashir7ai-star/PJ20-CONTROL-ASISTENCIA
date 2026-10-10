@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CONSENT_VERSION } from '@pj20/shared';
+import { eq } from 'drizzle-orm';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { Redis } from 'ioredis';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
@@ -23,7 +24,7 @@ import { createDatabase } from './db/client.js';
 import { ensureLoginRole } from './db/login-role.js';
 import { createPhotoStore, type PhotoStore } from './infra/photo-store.js';
 import { createStorageClient, ensureBucket } from './infra/storage.js';
-import { employees } from './db/schema.js';
+import { attendanceRecords, employees } from './db/schema.js';
 import { loadLocalEnv, TEST_DB, withDatabase } from './test/integration-setup.js';
 
 loadLocalEnv();
@@ -1117,5 +1118,265 @@ describe('límite de intentos', () => {
     } finally {
       await limited.close();
     }
+  });
+});
+
+describe('revisión y correcciones (Fase 6A)', () => {
+  /** Marking without selfie keeps these tests about the timeline only. */
+  const markBody = (kind: 'check_in' | 'check_out', over: { accuracyM?: number } = {}) => {
+    const now = Date.now();
+    return {
+      kind,
+      location: {
+        latitude: 3.4516,
+        longitude: -76.532,
+        accuracyM: over.accuracyM ?? 8,
+        capturedAt: new Date(now - 2000).toISOString(),
+      },
+      deviceTime: new Date(now).toISOString(),
+    };
+  };
+
+  async function employeeReady() {
+    const session = await loggedIn('employee');
+    const consent = await call('POST', '/me/consent', session.cookie, {
+      version: CONSENT_VERSION,
+      selfie: false,
+    });
+    expect(consent.statusCode).toBe(204);
+    return session;
+  }
+
+  async function mark(cookie: string, kind: 'check_in' | 'check_out', accuracyM?: number) {
+    const res = await call(
+      'POST',
+      '/attendance',
+      cookie,
+      markBody(kind, accuracyM ? { accuracyM } : {}),
+    );
+    expect(res.statusCode).toBe(201);
+    return res.json<{ id: string; serverTime: string }>();
+  }
+
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+
+  it('bandeja: una marcación con GPS impreciso espera revisión; aprobarla la saca', async () => {
+    const admin = await loggedIn('admin');
+    const employee = await employeeReady();
+    const record = await mark(employee.cookie, 'check_in', 250);
+
+    const queue = await call('GET', '/admin/review', admin.cookie);
+    expect(queue.statusCode).toBe(200);
+    expect(queue.json<{ id: string }[]>().map((e) => e.id)).toContain(record.id);
+
+    const approve = await call('POST', `/admin/attendance/${record.id}/review`, admin.cookie, {
+      decision: 'approved',
+    });
+    expect(approve.statusCode).toBe(204);
+    const after = await call('GET', '/admin/review', admin.cookie);
+    expect(after.json<{ id: string }[]>().map((e) => e.id)).not.toContain(record.id);
+
+    const day = await call('GET', '/admin/attendance', admin.cookie);
+    expect(day.json<{ id: string }[]>().find((e) => e.id === record.id)).toMatchObject({
+      source: 'record',
+      verdict: { decision: 'approved', note: null },
+    });
+  });
+
+  it('rechazar exige el motivo; queda auditado', async () => {
+    const admin = await loggedIn('admin');
+    const employee = await employeeReady();
+    const record = await mark(employee.cookie, 'check_in', 250);
+    const url = `/admin/attendance/${record.id}/review`;
+
+    expect((await call('POST', url, admin.cookie, { decision: 'rejected' })).statusCode).toBe(400);
+    expect(
+      (await call('POST', url, admin.cookie, { decision: 'rejected', note: 'corto' })).statusCode,
+    ).toBe(400);
+    const ok = await call('POST', url, admin.cookie, {
+      decision: 'rejected',
+      note: 'Marcó desde la casa, no desde la obra.',
+    });
+    expect(ok.statusCode).toBe(204);
+
+    const audit = await call('GET', '/admin/audit?limit=20', admin.cookie);
+    expect(
+      audit.json<{ action: string; targetId: string }[]>().find((a) => a.targetId === record.id),
+    ).toMatchObject({ action: 'attendance.reviewed' });
+  });
+
+  it('olvidó la salida: el administrador la agrega y la persona puede volver a entrar', async () => {
+    const admin = await loggedIn('admin');
+    const employee = await employeeReady();
+    await mark(employee.cookie, 'check_in');
+    // She cannot check in again: her exit is missing.
+    expect(
+      (await call('POST', '/attendance', employee.cookie, markBody('check_in'))).statusCode,
+    ).toBe(422);
+
+    const add = await call('POST', '/admin/corrections', admin.cookie, {
+      action: 'add',
+      employeeId: employee.user.id,
+      events: [{ kind: 'check_out', at: new Date(Date.now() + 1000).toISOString() }],
+      reason: 'Olvidó marcar la salida; confirmado con el supervisor.',
+    });
+    expect(add.statusCode).toBe(204);
+
+    const status = await call('GET', '/attendance/status', employee.cookie);
+    expect(status.json()).toMatchObject({ onDutySince: null, lastRecord: { kind: 'check_out' } });
+    await mark(employee.cookie, 'check_in');
+
+    const day = await call('GET', '/admin/attendance', admin.cookie);
+    expect(
+      day
+        .json<{ source: string; employee: { id: string } }[]>()
+        .find((e) => e.source === 'correction' && e.employee.id === employee.user.id),
+    ).toMatchObject({ kind: 'check_out', by: 'Usuario de prueba', voided: null });
+  });
+
+  it('un día olvidado completo (entrada y salida) se agrega junto', async () => {
+    const admin = await loggedIn('admin');
+    const employee = await employeeReady();
+    const res = await call('POST', '/admin/corrections', admin.cookie, {
+      action: 'add',
+      employeeId: employee.user.id,
+      events: [
+        { kind: 'check_in', at: hoursAgo(30) },
+        { kind: 'check_out', at: hoursAgo(21) },
+      ],
+      reason: 'Trabajó en la obra sin señal todo el día.',
+    });
+    expect(res.statusCode).toBe(204);
+  });
+
+  it('una corrección que rompe la alternancia, futura o muy vieja se rechaza', async () => {
+    const admin = await loggedIn('admin');
+    const employee = await employeeReady();
+    await mark(employee.cookie, 'check_in');
+    const add = (events: { kind: string; at: string }[]) =>
+      call('POST', '/admin/corrections', admin.cookie, {
+        action: 'add',
+        employeeId: employee.user.id,
+        events,
+        reason: 'Prueba de una corrección inválida.',
+      });
+
+    const double = await add([{ kind: 'check_in', at: hoursAgo(1) }]);
+    expect(double.statusCode).toBe(422);
+    expect(double.json<{ error: { message: string } }>().error.message).toMatch(
+      /dos entradas seguidas/,
+    );
+    expect((await add([{ kind: 'check_out', at: hoursAgo(-2) }])).statusCode).toBe(422);
+    expect((await add([{ kind: 'check_in', at: hoursAgo(24 * 100) }])).statusCode).toBe(422);
+    const noReason = await call('POST', '/admin/corrections', admin.cookie, {
+      action: 'add',
+      employeeId: employee.user.id,
+      events: [{ kind: 'check_out', at: hoursAgo(0) }],
+      reason: 'corto',
+    });
+    expect(noReason.statusCode).toBe(400);
+  });
+
+  it('anular: un par por error se anula junto; la entrada sola no (dejaría la salida suelta)', async () => {
+    const admin = await loggedIn('admin');
+    const employee = await employeeReady();
+    const checkIn = await mark(employee.cookie, 'check_in');
+    const checkOut = await mark(employee.cookie, 'check_out');
+    const voidIds = (targetIds: string[]) =>
+      call('POST', '/admin/corrections', admin.cookie, {
+        action: 'void',
+        targetIds,
+        reason: 'Marcó por error al probar la app.',
+      });
+
+    const alone = await voidIds([checkIn.id]);
+    expect(alone.statusCode).toBe(422);
+    expect(alone.json<{ error: { message: string } }>().error.message).toMatch(
+      /salida sin entrada/,
+    );
+
+    expect((await voidIds([checkIn.id, checkOut.id])).statusCode).toBe(204);
+    expect((await voidIds([checkOut.id])).statusCode).toBe(409);
+
+    const day = await call('GET', '/admin/attendance', admin.cookie);
+    const entry = day.json<{ id: string }[]>().find((e) => e.id === checkIn.id);
+    expect(entry).toMatchObject({ voided: { reason: 'Marcó por error al probar la app.' } });
+    // The original record is still there, untouched.
+    const [row] = await db
+      .select()
+      .from(attendanceRecords)
+      .where(eq(attendanceRecords.id, checkIn.id));
+    expect(row?.kind).toBe('check_in');
+    // Off duty again: the voided marks do not count.
+    expect((await call('GET', '/attendance/status', employee.cookie)).json()).toEqual({
+      onDutySince: null,
+      lastRecord: null,
+    });
+  });
+
+  it('una salida agregada por error se anula y el turno vuelve a quedar abierto', async () => {
+    const admin = await loggedIn('admin');
+    const employee = await employeeReady();
+    await mark(employee.cookie, 'check_in');
+    await call('POST', '/admin/corrections', admin.cookie, {
+      action: 'add',
+      employeeId: employee.user.id,
+      events: [{ kind: 'check_out', at: new Date(Date.now() + 1000).toISOString() }],
+      reason: 'Salida agregada para la prueba de anulación.',
+    });
+    const day = await call('GET', '/admin/attendance', admin.cookie);
+    const added = day
+      .json<{ id: string; source: string; employee: { id: string } }[]>()
+      .find((e) => e.source === 'correction' && e.employee.id === employee.user.id);
+    if (!added) throw new Error('sin corrección');
+    const voided = await call('POST', '/admin/corrections', admin.cookie, {
+      action: 'void',
+      targetIds: [added.id],
+      reason: 'Se agregó a la persona equivocada.',
+    });
+    expect(voided.statusCode).toBe(204);
+    const status = await call('GET', '/attendance/status', employee.cookie);
+    expect(status.json()).toMatchObject({ lastRecord: { kind: 'check_in' } });
+    // A void cannot be voided: re-adding is the way back.
+    const audit = await call('GET', '/admin/audit?limit=5', admin.cookie);
+    expect(audit.json<{ action: string }[]>()[0]).toMatchObject({ action: 'attendance.voided' });
+  });
+
+  it('no se anulan juntas marcaciones de dos personas', async () => {
+    const admin = await loggedIn('admin');
+    const ana = await employeeReady();
+    const beto = await employeeReady();
+    const a = await mark(ana.cookie, 'check_in');
+    const b = await mark(beto.cookie, 'check_in');
+    const res = await call('POST', '/admin/corrections', admin.cookie, {
+      action: 'void',
+      targetIds: [a.id, b.id],
+      reason: 'Intento de anular a dos personas.',
+    });
+    expect(res.statusCode).toBe(422);
+  });
+
+  it('las revisiones y correcciones son inmutables, incluso para la API', async () => {
+    await expect(pool.query('UPDATE attendance_corrections SET reason = reason')).rejects.toThrow(
+      /permission denied/,
+    );
+    await expect(pool.query('DELETE FROM attendance_reviews')).rejects.toThrow(/permission denied/);
+  });
+
+  it('un empleado no puede revisar ni corregir', async () => {
+    const employee = await employeeReady();
+    const record = await mark(employee.cookie, 'check_in');
+    expect((await call('GET', '/admin/review', employee.cookie)).statusCode).toBe(403);
+    const review = await call('POST', `/admin/attendance/${record.id}/review`, employee.cookie, {
+      decision: 'approved',
+    });
+    expect(review.statusCode).toBe(403);
+    const correction = await call('POST', '/admin/corrections', employee.cookie, {
+      action: 'add',
+      employeeId: employee.user.id,
+      events: [{ kind: 'check_out', at: hoursAgo(0) }],
+      reason: 'Me agrego la salida yo mismo.',
+    });
+    expect(correction.statusCode).toBe(403);
   });
 });

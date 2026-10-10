@@ -1,5 +1,11 @@
 import { ChevronDown, Search } from 'lucide-react';
-import { type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, useId } from 'react';
+import {
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  useId,
+} from 'react';
 
 import { cn } from '../../lib/cn.js';
 
@@ -29,6 +35,12 @@ export function Field({ label, hint, children, className }: FieldProps) {
 
 export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(control, className)} {...props} />;
+}
+
+export function TextArea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea className={cn(control, 'h-auto min-h-24 resize-y py-2.5', className)} {...props} />
+  );
 }
 
 export function SearchInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {

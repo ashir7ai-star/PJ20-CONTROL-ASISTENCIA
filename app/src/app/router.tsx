@@ -82,6 +82,13 @@ export const router = createBrowserRouter(
           },
         },
         {
+          path: '/admin/revisar',
+          lazy: async () => {
+            const { ReviewPage } = await import('../features/admin/review-page.js');
+            return { Component: ReviewPage };
+          },
+        },
+        {
           path: '/admin/empleados',
           lazy: async () => {
             const { EmployeesPage } = await import('../features/admin/employees-page.js');

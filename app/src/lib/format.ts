@@ -2,8 +2,10 @@
  * Spanish (Colombia) formatting. Every date/time shown to users goes through
  * here so the whole app is consistent and 100% Spanish (CLAUDE.md B.14).
  */
+import { TIME_ZONE } from '@pj20/shared/constants';
+
+export { TIME_ZONE };
 export const LOCALE = 'es-CO';
-export const TIME_ZONE = 'America/Bogota';
 
 const timeFormatter = new Intl.DateTimeFormat(LOCALE, {
   hour: 'numeric',
@@ -16,6 +18,12 @@ const longDateFormatter = new Intl.DateTimeFormat(LOCALE, {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
+  timeZone: TIME_ZONE,
+});
+
+const shortDateFormatter = new Intl.DateTimeFormat(LOCALE, {
+  day: 'numeric',
+  month: 'short',
   timeZone: TIME_ZONE,
 });
 
@@ -49,6 +57,12 @@ export function formatTime(date: Date): string {
 export function formatLongDate(date: Date): string {
   const text = longDateFormatter.format(date);
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** "8 de oct" (day and month only, for lists spanning several days) */
+export function formatShortDate(date: Date): string {
+  // Some ICU versions write "oct."; drop the abbreviation dot for a cleaner list.
+  return shortDateFormatter.format(date).replace(/\.$/, '');
 }
 
 /** 283 → "4 h 43 min" · 45 → "45 min" · 120 → "2 h" */

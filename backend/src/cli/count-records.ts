@@ -16,6 +16,8 @@ if (!url) {
 const TABLES = [
   ['employees', 'empleados'],
   ['attendance_records', 'marcaciones'],
+  ['attendance_reviews', 'revisiones de marcaciones'],
+  ['attendance_corrections', 'correcciones de marcaciones'],
   ['consents', 'consentimientos'],
   ['selfie_authorizations', 'decisiones sobre la selfie'],
   ['access_requests', 'solicitudes de acceso'],

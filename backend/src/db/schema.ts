@@ -6,6 +6,7 @@
  */
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   bigserial,
   boolean,
   check,
@@ -222,5 +223,87 @@ export const backupRuns = pgTable(
   (t) => [
     index('backup_runs_finished_idx').on(t.finishedAt),
     check('backup_runs_kind', sql`${t.kind} IN ('db-daily', 'db-monthly', 'selfies')`),
+  ],
+);
+
+export const reviewDecisionEnum = pgEnum('review_decision', ['approved', 'rejected']);
+
+/**
+ * The administrator's verdict on a record waiting for review (Fase 6). A
+ * rejected record stays in the timeline but its shift does not count as worked
+ * time. Append-only: the latest row is the verdict in force.
+ */
+export const attendanceReviews = pgTable(
+  'attendance_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    recordId: uuid('record_id')
+      .notNull()
+      .references(() => attendanceRecords.id, { onDelete: 'restrict' }),
+    decision: reviewDecisionEnum('decision').notNull(),
+    note: text('note'),
+    /** Snapshot of who decided (no FK: kept meaningful like the audit log). */
+    reviewerId: uuid('reviewer_id').notNull(),
+    reviewerName: text('reviewer_name').notNull(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('attendance_reviews_record_idx').on(t.recordId, t.decidedAt),
+    check('attendance_reviews_note_length', sql`char_length(${t.note}) <= 500`),
+    check(
+      'attendance_reviews_rejection_note',
+      sql`${t.decision} = 'approved' OR coalesce(char_length(${t.note}), 0) >= 10`,
+    ),
+  ],
+);
+
+export const correctionActionEnum = pgEnum('correction_action', ['add', 'void']);
+
+/**
+ * Corrections of the attendance timeline (CLAUDE.md §2.4): records are never
+ * edited, so a forgotten mark is ADDED with the time the administrator sets,
+ * and a mistaken one is VOIDED, always with a reason. Append-only.
+ */
+export const attendanceCorrections = pgTable(
+  'attendance_corrections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'restrict' }),
+    action: correctionActionEnum('action').notNull(),
+    /** add: the kind and time of the forgotten mark. */
+    kind: attendanceKindEnum('kind'),
+    effectiveTime: timestamp('effective_time', { withTimezone: true }),
+    /** void: exactly one target, a record or an earlier "add" correction. */
+    voidsRecordId: uuid('voids_record_id').references(() => attendanceRecords.id, {
+      onDelete: 'restrict',
+    }),
+    voidsCorrectionId: uuid('voids_correction_id').references(
+      (): AnyPgColumn => attendanceCorrections.id,
+      { onDelete: 'restrict' },
+    ),
+    reason: text('reason').notNull(),
+    /** Snapshot of who corrected (no FK: kept meaningful like the audit log). */
+    authorId: uuid('author_id').notNull(),
+    authorName: text('author_name').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('attendance_corrections_employee_idx').on(t.employeeId, t.effectiveTime),
+    uniqueIndex('attendance_corrections_voids_record_idx')
+      .on(t.voidsRecordId)
+      .where(sql`${t.voidsRecordId} IS NOT NULL`),
+    uniqueIndex('attendance_corrections_voids_correction_idx')
+      .on(t.voidsCorrectionId)
+      .where(sql`${t.voidsCorrectionId} IS NOT NULL`),
+    check('attendance_corrections_reason_length', sql`char_length(${t.reason}) BETWEEN 10 AND 500`),
+    check(
+      'attendance_corrections_shape',
+      sql`(${t.action} = 'add' AND ${t.kind} IS NOT NULL AND ${t.effectiveTime} IS NOT NULL
+            AND ${t.voidsRecordId} IS NULL AND ${t.voidsCorrectionId} IS NULL)
+        OR (${t.action} = 'void' AND ${t.kind} IS NULL AND ${t.effectiveTime} IS NULL
+            AND num_nonnulls(${t.voidsRecordId}, ${t.voidsCorrectionId}) = 1)`,
+    ),
   ],
 );

@@ -134,6 +134,6 @@ Cada fase termina con: verificación completa (lint, typecheck, pruebas, build, 
 | D9 — App instalable           | 🧪 Construida; falta prueba en iPhone y Android reales |
 | 4 — Antifraude servidor       | Pendiente                                              |
 | 5 — APK Android               | Pendiente                                              |
-| 6 — Panel administrativo      | Pendiente                                              |
+| 6 — Panel administrativo      | 🛠️ En construcción: 6A (revisión y correcciones) ✅    |
 | 7 — Despliegue y piloto       | Pendiente                                              |
 | 8 — Producción                | Pendiente                                              |

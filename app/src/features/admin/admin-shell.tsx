@@ -1,9 +1,9 @@
 /**
- * Frame of the REAL admin pages (Marcaciones, Empleados): brand header, tabs,
+ * Frame of the REAL admin pages (Marcaciones, Por revisar, Empleados): brand header, tabs,
  * back to Marcar and sign-out. It confirms the session is an administrator's
  * before rendering anything; the server checks every request anyway.
  */
-import type { AccessRequestDto, BackupStatus, Me } from '@pj20/shared';
+import type { AccessRequestDto, AdminAttendanceEntry, BackupStatus, Me } from '@pj20/shared';
 import { DatabaseBackup, Fingerprint, LogOut, TriangleAlert } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router';
@@ -17,6 +17,7 @@ import { formatLongDate, formatTime } from '../../lib/format.js';
 
 const tabs = [
   { to: '/admin', label: 'Marcaciones' },
+  { to: '/admin/revisar', label: 'Por revisar' },
   { to: '/admin/empleados', label: 'Empleados' },
 ];
 
@@ -29,6 +30,7 @@ export function AdminShell({ children }: { children: (me: Me, tools: ShellTools)
   const navigate = useNavigate();
   const [me, setMe] = useState<Me | null>(null);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [pendingReview, setPendingReview] = useState(0);
   const [backups, setBackups] = useState<BackupStatus | null>(null);
   const [countsVersion, setCountsVersion] = useState(0);
   const refreshCounts = useCallback(() => {
@@ -43,6 +45,12 @@ export function AdminShell({ children }: { children: (me: Me, tools: ShellTools)
         if (!cancelled) setPendingRequests(requests.length);
       },
       () => undefined, // A badge is a hint: never block the page for it.
+    );
+    api<AdminAttendanceEntry[]>('/admin/review').then(
+      (queue) => {
+        if (!cancelled) setPendingReview(queue.length);
+      },
+      () => undefined,
     );
     api<BackupStatus>('/admin/backups').then(
       (status) => {
@@ -124,11 +132,11 @@ export function AdminShell({ children }: { children: (me: Me, tools: ShellTools)
               }
             >
               {tab.label}
-              {tab.to === '/admin/empleados' && pendingRequests > 0 && (
-                <span className="ml-2 grid min-w-5 place-items-center rounded-full bg-warning px-1.5 text-[12px] font-bold text-canvas">
-                  {pendingRequests}
-                  <span className="sr-only"> solicitudes de acceso pendientes</span>
-                </span>
+              {tab.to === '/admin/revisar' && (
+                <CountBadge count={pendingReview} label="marcaciones por revisar" />
+              )}
+              {tab.to === '/admin/empleados' && (
+                <CountBadge count={pendingRequests} label="solicitudes de acceso pendientes" />
               )}
             </NavLink>
           ))}
@@ -145,6 +153,16 @@ export function AdminShell({ children }: { children: (me: Me, tools: ShellTools)
         )}
       </main>
     </div>
+  );
+}
+
+function CountBadge({ count, label }: { count: number; label: string }) {
+  if (count === 0) return null;
+  return (
+    <span className="ml-2 grid min-w-5 place-items-center rounded-full bg-warning px-1.5 text-[12px] font-bold text-canvas">
+      {count}
+      <span className="sr-only"> {label}</span>
+    </span>
   );
 }
 

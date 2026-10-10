@@ -6,6 +6,7 @@ import {
   formatDuration,
   formatElapsed,
   formatLongDate,
+  formatShortDate,
   formatTime,
 } from './format.js';
 
@@ -71,5 +72,11 @@ describe('formatElapsed', () => {
     [-5000, '0:00:00'],
   ])('%i ms → %s', (ms, expected) => {
     expect(formatElapsed(ms)).toBe(expected);
+  });
+});
+
+describe('formatShortDate', () => {
+  it('día y mes en Bogotá, sin punto final', () => {
+    expect(formatShortDate(new Date('2026-10-08T03:00:00Z'))).toMatch(/^7\sde\soct$/);
   });
 });

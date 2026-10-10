@@ -7,6 +7,8 @@ import {
   accessRequestCurrentSchema,
   accessRequestSchema,
   adminAttendanceEntrySchema,
+  adminTimelineEntrySchema,
+  correctionRequestSchema,
   attendanceStatusSchema,
   auditEntrySchema,
   backupStatusSchema,
@@ -19,6 +21,7 @@ import {
   markResponseSchema,
   meSchema,
   nonceResponseSchema,
+  reviewRequestSchema,
   selfieAuthorizationRequestSchema,
   SIGN_IN_WINDOW_DONE_PATH,
   type SignInOutcome,
@@ -62,7 +65,13 @@ import {
   listPending,
   rejectRequest,
 } from '../access/service.js';
-import { attendanceStatus, listDay, markAttendance, readSelfie } from '../attendance/service.js';
+import { attendanceStatus, markAttendance, readSelfie } from '../attendance/service.js';
+import {
+  applyCorrection,
+  listDay,
+  reviewQueue,
+  reviewRecord,
+} from '../attendance/admin-timeline.js';
 import { businessToday } from '../attendance/rules.js';
 import { backupStatus } from '../backup/service.js';
 import { auditLog } from '../db/schema.js';
@@ -436,12 +445,42 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
       schema: {
         tags: ['admin'],
         querystring: z.object({ date: businessDateSchema.optional() }),
-        response: { 200: z.array(adminAttendanceEntrySchema) },
+        response: { 200: z.array(adminTimelineEntrySchema) },
       },
     },
     async (request) => {
       requireAdmin(request);
       return listDay(db, request.query.date ?? businessToday(new Date()));
+    },
+  );
+
+  // ── Review and corrections (Fase 6) ─────────────────────────────────────
+  app.get(
+    '/admin/review',
+    { schema: { tags: ['admin'], response: { 200: z.array(adminAttendanceEntrySchema) } } },
+    async (request) => {
+      requireAdmin(request);
+      return reviewQueue(db);
+    },
+  );
+
+  app.post(
+    '/admin/attendance/:id/review',
+    { schema: { tags: ['admin'], params: idParams, body: reviewRequestSchema } },
+    async (request, reply) => {
+      const { audit } = adminContext(request);
+      await reviewRecord(db, request.params.id, request.body, audit);
+      return reply.code(204).send();
+    },
+  );
+
+  app.post(
+    '/admin/corrections',
+    { schema: { tags: ['admin'], body: correctionRequestSchema } },
+    async (request, reply) => {
+      const { audit } = adminContext(request);
+      await applyCorrection(db, request.body, audit);
+      return reply.code(204).send();
     },
   );
 
