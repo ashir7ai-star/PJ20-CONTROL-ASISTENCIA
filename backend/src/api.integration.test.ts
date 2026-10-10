@@ -20,6 +20,7 @@ import { createAccessProofStore } from './access/proof.js';
 import { purgeExpiredSelfies } from './attendance/retention.js';
 import { selfieKey } from './attendance/rules.js';
 import { createDatabase } from './db/client.js';
+import { ensureLoginRole } from './db/login-role.js';
 import { createPhotoStore, type PhotoStore } from './infra/photo-store.js';
 import { createStorageClient, ensureBucket } from './infra/storage.js';
 import { employees } from './db/schema.js';
@@ -915,6 +916,91 @@ describe('marcaciones (Fase 3)', () => {
       expect(res.statusCode).toBe(404);
       expect(res.json<{ error: { message: string } }>().error.message).toMatch(/conservación/);
     });
+  });
+});
+
+describe('copias de seguridad (D8)', () => {
+  /** The owner writes runs the way the backup service would. */
+  async function asOwner<T>(work: (owner: pg.Client) => Promise<T>): Promise<T> {
+    const owner = new pg.Client({
+      connectionString: withDatabase(process.env.DATABASE_MIGRATION_URL ?? '', TEST_DB),
+    });
+    await owner.connect();
+    try {
+      return await work(owner);
+    } finally {
+      await owner.end();
+    }
+  }
+
+  it('el panel avisa si no hay copia reciente y muestra la última buena', async () => {
+    const admin = await loggedIn('admin');
+    await asOwner((owner) => owner.query('DELETE FROM backup_runs'));
+    const empty = await call('GET', '/admin/backups', admin.cookie);
+    expect(empty.json()).toMatchObject({ stale: true, database: { lastSuccessAt: null } });
+
+    await asOwner((owner) =>
+      owner.query(
+        `INSERT INTO backup_runs (kind, ok, detail, finished_at) VALUES
+           ('db-daily', true, '28 KB', now() - interval '40 hours'),
+           ('db-daily', false, 'sin conexión con Drive', now() - interval '1 hour')`,
+      ),
+    );
+    const old = (await call('GET', '/admin/backups', admin.cookie)).json<{
+      stale: boolean;
+      database: { lastFailure: { detail: string } | null };
+    }>();
+    expect(old.stale).toBe(true);
+    expect(old.database.lastFailure?.detail).toBe('sin conexión con Drive');
+
+    await asOwner((owner) =>
+      owner.query("INSERT INTO backup_runs (kind, ok, detail) VALUES ('db-daily', true, '30 KB')"),
+    );
+    const fresh = (await call('GET', '/admin/backups', admin.cookie)).json<{
+      stale: boolean;
+      database: { lastFailure: unknown };
+    }>();
+    expect(fresh.stale).toBe(false);
+    expect(fresh.database.lastFailure).toBeNull();
+  });
+
+  it('un empleado no ve el estado de las copias', async () => {
+    const { cookie } = await loggedIn('employee');
+    expect((await call('GET', '/admin/backups', cookie)).statusCode).toBe(403);
+  });
+
+  it('el usuario de respaldos lee todo y registra copias, pero no puede cambiar ningún registro', async () => {
+    const password = randomUUID();
+    const backupUrl = withDatabase(
+      `postgres://pj20_respaldos_test:${password}@localhost:15432/x`,
+      TEST_DB,
+    );
+    const serverUrl = new URL(process.env.DATABASE_URL ?? '');
+    const url = new URL(backupUrl);
+    url.host = serverUrl.host;
+    await ensureLoginRole({
+      ownerUrl: withDatabase(process.env.DATABASE_MIGRATION_URL ?? '', TEST_DB),
+      userUrl: url.href,
+      group: 'pj20_backup',
+      label: 'prueba',
+    });
+    const backup = new pg.Client({ connectionString: url.href });
+    await backup.connect();
+    try {
+      await expect(backup.query('SELECT count(*) FROM attendance_records')).resolves.toBeTruthy();
+      await expect(
+        backup.query("INSERT INTO backup_runs (kind, ok) VALUES ('selfies', true)"),
+      ).resolves.toBeTruthy();
+      await expect(backup.query("UPDATE employees SET name = 'x'")).rejects.toThrow(
+        /permission denied/,
+      );
+      await expect(backup.query('DELETE FROM backup_runs')).rejects.toThrow(/permission denied/);
+      await expect(
+        backup.query("INSERT INTO employees (name, email) VALUES ('x', 'x@x.co')"),
+      ).rejects.toThrow(/permission denied/);
+    } finally {
+      await backup.end();
+    }
   });
 });
 

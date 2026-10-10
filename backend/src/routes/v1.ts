@@ -9,6 +9,7 @@ import {
   adminAttendanceEntrySchema,
   attendanceStatusSchema,
   auditEntrySchema,
+  backupStatusSchema,
   businessDateSchema,
   consentRequestSchema,
   createEmployeeSchema,
@@ -56,6 +57,7 @@ import {
 } from '../access/service.js';
 import { attendanceStatus, listDay, markAttendance, readSelfie } from '../attendance/service.js';
 import { businessToday } from '../attendance/rules.js';
+import { backupStatus } from '../backup/service.js';
 import { auditLog } from '../db/schema.js';
 import { AccountNotAuthorizedError, DomainError, errors } from '../errors.js';
 import type { PhotoStore } from '../infra/photo-store.js';
@@ -367,6 +369,15 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
       const { audit } = adminContext(request);
       await rejectRequest(db, request.params.id, audit);
       return reply.code(204).send();
+    },
+  );
+
+  app.get(
+    '/admin/backups',
+    { schema: { tags: ['admin'], response: { 200: backupStatusSchema } } },
+    async (request) => {
+      requireAdmin(request);
+      return backupStatus(db, new Date());
     },
   );
 

@@ -34,6 +34,8 @@ describe('Política de Tratamiento de Datos', () => {
     expect(screen.getByText(/Si no la autorizas:/)).toBeInTheDocument();
     expect(screen.getAllByText(/90 días/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/3 años después/)).toBeInTheDocument();
+    expect(screen.getByText(/copias de seguridad diarias cifradas/)).toBeInTheDocument();
+    expect(screen.getByText(/encargados del tratamiento/)).toBeInTheDocument();
     expect(screen.getByText(/NIT: 901.724.892-9/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'nathan@ylevigroup.com' })).toHaveAttribute(
       'href',

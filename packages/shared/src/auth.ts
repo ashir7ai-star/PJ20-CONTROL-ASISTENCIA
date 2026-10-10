@@ -118,3 +118,19 @@ export const accessRequestSchema = z.object({
   deactivatedEmployee: z.boolean(),
 });
 export type AccessRequestDto = z.infer<typeof accessRequestSchema>;
+
+// ── Off-server backups (D8) ───────────────────────────────────────────────
+
+const backupKindStatusSchema = z.object({
+  lastSuccessAt: z.iso.datetime().nullable(),
+  /** The latest run, when it failed after the last success (short, non-sensitive). */
+  lastFailure: z.object({ at: z.iso.datetime(), detail: z.string().nullable() }).nullable(),
+});
+
+export const backupStatusSchema = z.object({
+  database: backupKindStatusSchema,
+  selfies: backupKindStatusSchema,
+  /** No good database copy in the last 36 hours (or ever): the panel warns. */
+  stale: z.boolean(),
+});
+export type BackupStatus = z.infer<typeof backupStatusSchema>;

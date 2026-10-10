@@ -134,3 +134,7 @@ Para pasar de pruebas a uso real. Borra **todo**: empleados, marcaciones, selfie
 3. **Quita** `PERMITIR_REINICIO_DATOS` de Environment → **Save** y **Deploy**. Sin esa variable el comando queda bloqueado.
 
 **Después de esto, nunca más.** Con registros reales, el reinicio destruiría pruebas laborales que la ley obliga a conservar.
+
+## 11. Copias de seguridad
+
+Configuración, prueba de restauración y recuperación ante desastres: [RESPALDOS.md](RESPALDOS.md).

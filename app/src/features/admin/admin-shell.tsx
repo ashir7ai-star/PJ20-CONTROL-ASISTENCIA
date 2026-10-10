@@ -3,8 +3,8 @@
  * back to Marcar and sign-out. It confirms the session is an administrator's
  * before rendering anything; the server checks every request anyway.
  */
-import type { AccessRequestDto, Me } from '@pj20/shared';
-import { Fingerprint, LogOut } from 'lucide-react';
+import type { AccessRequestDto, BackupStatus, Me } from '@pj20/shared';
+import { DatabaseBackup, Fingerprint, LogOut, TriangleAlert } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router';
 
@@ -13,6 +13,7 @@ import { AppLoading } from '../../components/brand/app-loading.js';
 import { Logo } from '../../components/brand/brand-header.js';
 import { ThemeMenu } from '../../components/ui/theme-menu.js';
 import { cn } from '../../lib/cn.js';
+import { formatLongDate, formatTime } from '../../lib/format.js';
 
 const tabs = [
   { to: '/admin', label: 'Marcaciones' },
@@ -28,6 +29,7 @@ export function AdminShell({ children }: { children: (me: Me, tools: ShellTools)
   const navigate = useNavigate();
   const [me, setMe] = useState<Me | null>(null);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [backups, setBackups] = useState<BackupStatus | null>(null);
   const [countsVersion, setCountsVersion] = useState(0);
   const refreshCounts = useCallback(() => {
     setCountsVersion((n) => n + 1);
@@ -41,6 +43,12 @@ export function AdminShell({ children }: { children: (me: Me, tools: ShellTools)
         if (!cancelled) setPendingRequests(requests.length);
       },
       () => undefined, // A badge is a hint: never block the page for it.
+    );
+    api<BackupStatus>('/admin/backups').then(
+      (status) => {
+        if (!cancelled) setBackups(status);
+      },
+      () => undefined,
     );
     return () => {
       cancelled = true;
@@ -126,7 +134,41 @@ export function AdminShell({ children }: { children: (me: Me, tools: ShellTools)
           ))}
         </nav>
       </header>
-      <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">{children(me, { refreshCounts })}</main>
+      {backups?.stale && <BackupAlert status={backups} />}
+      <main className="mx-auto max-w-3xl px-4 pb-16 pt-6">
+        {children(me, { refreshCounts })}
+        {backups && !backups.stale && backups.database.lastSuccessAt && (
+          <p className="mt-10 flex items-center justify-center gap-2 text-[13px] text-ink-muted">
+            <DatabaseBackup className="size-4" aria-hidden="true" />
+            Última copia de seguridad: {when(backups.database.lastSuccessAt)} ✓
+          </p>
+        )}
+      </main>
+    </div>
+  );
+}
+
+const when = (iso: string) => {
+  const at = new Date(iso);
+  return `${formatLongDate(at)}, ${formatTime(at)}`;
+};
+
+/** Backups stopped (D8): impossible to miss, with what to do. */
+function BackupAlert({ status }: { status: BackupStatus }) {
+  const { lastSuccessAt, lastFailure } = status.database;
+  return (
+    <div role="alert" className="border-b border-line bg-danger-soft text-danger">
+      <div className="mx-auto flex max-w-3xl gap-3 px-4 py-3 text-[14px]">
+        <TriangleAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+        <p>
+          <strong className="font-semibold">Las copias de seguridad no están al día.</strong>{' '}
+          {lastSuccessAt
+            ? `La última copia buena es del ${when(lastSuccessAt)}.`
+            : 'Todavía no hay ninguna copia de los registros.'}{' '}
+          {lastFailure?.detail && `Último error: ${lastFailure.detail}. `}
+          Revisa el servicio «pj20-asistencia-respaldos» en Easypanel (guía de respaldos).
+        </p>
+      </div>
     </div>
   );
 }

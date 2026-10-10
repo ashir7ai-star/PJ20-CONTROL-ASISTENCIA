@@ -202,3 +202,25 @@ export const selfieAuthorizations = pgTable(
   },
   (t) => [index('selfie_authorizations_employee_idx').on(t.employeeId, t.decidedAt)],
 );
+
+/**
+ * Result of every off-server backup run (D8). Written by the backup service
+ * with its own read-only role (it may only INSERT here); read by the admin
+ * panel to show the last good copy and warn when backups stop.
+ */
+export const backupRuns = pgTable(
+  'backup_runs',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    /** db-daily · db-monthly · selfies */
+    kind: text('kind').notNull(),
+    ok: boolean('ok').notNull(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Short, non-sensitive summary (size, files, or the error line). */
+    detail: text('detail'),
+  },
+  (t) => [
+    index('backup_runs_finished_idx').on(t.finishedAt),
+    check('backup_runs_kind', sql`${t.kind} IN ('db-daily', 'db-monthly', 'selfies')`),
+  ],
+);
