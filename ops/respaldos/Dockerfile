@@ -4,7 +4,7 @@
 # Build context: repository root  →  docker build -f ops/respaldos/Dockerfile .
 FROM postgres:18-alpine
 
-RUN apk add --no-cache rclone tini tzdata && install -d -m 0755 /app
+RUN apk add --no-cache rclone tini tzdata jq && install -d -m 0755 /app
 ENV TZ=America/Bogota
 
 COPY --chmod=0644 ops/respaldos/configurar.sh /app/configurar.sh
