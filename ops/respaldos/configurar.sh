@@ -6,22 +6,34 @@
 # No config file: everything is defined by the environment below.
 export RCLONE_CONFIG=/dev/null
 
-# The Drive permission as `rclone authorize` prints it: plain token JSON
-# ({"access_token":…}) or, when authorizing with options (our drive.file
-# scope), a base64 blob of {"token":"<token JSON>"}. Both are accepted.
+# The Drive permission as `rclone authorize` prints it. Depending on the rclone
+# version and options it is the token JSON ({"access_token":…}) or one or more
+# base64 layers around it, wrapped as {"token":…} or {"config_token":…}.
+# Unwrap layer by layer until the token itself appears.
+desenvolver_base64() {
+  relleno=$(printf '%s' "$1" | tr -d '\n\r ' | tr '_-' '/+')
+  while [ $((${#relleno} % 4)) -ne 0 ]; do relleno="${relleno}="; done
+  printf '%s' "$relleno" | base64 -d 2> /dev/null
+}
+
 token_de_drive() {
-  case "$1" in
-    "{"*) printf '%s' "$1" ;;
-    *)
-      relleno=$(printf '%s' "$1" | tr -d '\n\r ' | tr '_-' '/+')
-      while [ $((${#relleno} % 4)) -ne 0 ]; do relleno="${relleno}="; done
-      token=$(printf '%s' "$relleno" | base64 -d 2> /dev/null | jq -er '(if has("access_token") then . else (.token // .config_token) end) | if type == "string" then . else tojson end' 2> /dev/null) || {
-        echo "RCLONE_DRIVE_TOKEN no es un permiso válido de rclone authorize" >&2
-        return 1
-      }
-      printf '%s' "$token"
-      ;;
-  esac
+  valor=$1
+  for _ in 1 2 3 4 5; do
+    case "$valor" in
+      "{"*)
+        if printf '%s' "$valor" | jq -e 'has("access_token")' > /dev/null 2>&1; then
+          printf '%s' "$valor" | jq -c .
+          return 0
+        fi
+        valor=$(printf '%s' "$valor" |
+          jq -er '(.token // .config_token) | if type == "string" then . else tojson end' \
+            2> /dev/null) || break
+        ;;
+      *) valor=$(desenvolver_base64 "$valor") || break ;;
+    esac
+  done
+  echo "RCLONE_DRIVE_TOKEN no es un permiso válido de rclone authorize" >&2
+  return 1
 }
 
 # Destination under the encryption layer. Default: the "PJ20-respaldos" folder
