@@ -13,7 +13,7 @@ import { BrandHeader } from '../components/brand/brand-header.js';
  */
 export function PrivacyPolicyPage() {
   return (
-    <div className="min-h-dvh bg-surface text-ink">
+    <div className="safe-area min-h-dvh bg-surface text-ink">
       <main className="mx-auto max-w-2xl px-6 py-12">
         <BrandHeader />
 

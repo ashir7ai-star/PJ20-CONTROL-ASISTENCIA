@@ -44,12 +44,72 @@ function sharePreview(publicUrl: string | undefined): Plugin {
   };
 }
 
+/**
+ * iPhone launch screens (public/icons/arranque-*.png), portrait: CSS width,
+ * CSS height and pixel ratio of each screen size. iOS shows the one matching
+ * the phone while the installed app opens; without it the screen flashes white.
+ */
+const LAUNCH_SCREENS: readonly (readonly [number, number, number])[] = [
+  [440, 956, 3], // 16 Pro Max, 17 Pro Max
+  [430, 932, 3], // 14 Pro Max, 15 Plus/Pro Max, 16 Plus
+  [402, 874, 3], // 16 Pro, 17, 17 Pro
+  [393, 852, 3], // 14 Pro, 15, 15 Pro, 16
+  [428, 926, 3], // 12/13 Pro Max, 14 Plus
+  [390, 844, 3], // 12, 13, 14, 12/13 Pro
+  [414, 896, 3], // XS Max, 11 Pro Max
+  [375, 812, 3], // X, XS, 11 Pro, 12/13 mini
+  [414, 896, 2], // XR, 11
+  [375, 667, 2], // SE (2.ª y 3.ª gen.), 8
+];
+
+/**
+ * Installable app (D9): manifest, home-screen icons and iPhone tags. Only the
+ * real app: the GitHub Pages prototype lives under another path and must not
+ * be installed.
+ */
+function installableApp(enabled: boolean): Plugin {
+  return {
+    name: 'pj20-installable-app',
+    transformIndexHtml() {
+      if (!enabled) return [];
+      const tag = (name: 'link' | 'meta', attrs: Record<string, string>) => ({
+        tag: name,
+        attrs,
+        injectTo: 'head' as const,
+      });
+      return [
+        tag('link', { rel: 'manifest', href: '/manifest.webmanifest' }),
+        tag('link', { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon.png' }),
+        tag('meta', { name: 'mobile-web-app-capable', content: 'yes' }),
+        tag('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' }),
+        tag('meta', { name: 'apple-mobile-web-app-title', content: 'Asistencia' }),
+        tag('meta', {
+          name: 'apple-mobile-web-app-status-bar-style',
+          content: 'black-translucent',
+        }),
+        ...LAUNCH_SCREENS.map(([width, height, ratio]) =>
+          tag('link', {
+            rel: 'apple-touch-startup-image',
+            href: `/icons/arranque-${String(width * ratio)}x${String(height * ratio)}.png`,
+            media: `(device-width: ${String(width)}px) and (device-height: ${String(height)}px) and (-webkit-device-pixel-ratio: ${String(ratio)}) and (orientation: portrait)`,
+          }),
+        ),
+      ];
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   // "/" for Easypanel (own domain); "/PJ20-CONTROL-ASISTENCIA/" for the GitHub Pages prototype.
   base: process.env.VITE_BASE ?? '/',
   // One .env at the repository root for API and app (only VITE_* reach the browser).
   envDir: '..',
-  plugins: [react(), tailwindcss(), sharePreview(loadEnv(mode, '..', 'VITE_').VITE_PUBLIC_URL)],
+  plugins: [
+    react(),
+    tailwindcss(),
+    sharePreview(loadEnv(mode, '..', 'VITE_').VITE_PUBLIC_URL),
+    installableApp(process.env.VITE_MODO !== 'prototipo'),
+  ],
   server: {
     port: 5173,
     strictPort: true,

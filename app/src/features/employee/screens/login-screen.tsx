@@ -4,14 +4,19 @@ import type { ReactNode } from 'react';
 import { Logo } from '../../../components/brand/brand-header.js';
 
 interface LoginScreenProps {
-  /** Prototype only: mock button handler. */
+  /**
+   * Our own "Continuar con Google" button: the app installed on iPhone (D9),
+   * which needs the tap itself to open its sign-in window, and the prototype.
+   */
   onGoogle?: () => void;
-  /** Real app: the official Google Sign-In button. */
+  /** Real app in the browser: the official Google Sign-In button. */
   googleButton?: ReactNode;
   /** True while the server verifies the credential. */
   verifying?: boolean;
   /** Spanish error message to show above the button. */
   error?: string | null;
+  /** Real app: invitation to install it on the home screen (D9). */
+  installInvite?: ReactNode;
 }
 
 export function LoginScreen({
@@ -19,6 +24,7 @@ export function LoginScreen({
   googleButton,
   verifying = false,
   error,
+  installInvite,
 }: LoginScreenProps) {
   return (
     <div className="bg-pulse safe-area min-h-dvh text-ink">
@@ -34,6 +40,7 @@ export function LoginScreen({
         </section>
 
         <div className="flex flex-col gap-4">
+          {installInvite}
           {error && (
             <p
               role="alert"

@@ -3,13 +3,15 @@
  * and marking with selfie + GPS since Fase 3).
  */
 import type { Me } from '@pj20/shared';
-import { CONSENT_VERSION } from '@pj20/shared/constants';
+import { CONSENT_VERSION, type SignInOutcome } from '@pj20/shared/constants';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
 import { api, ApiRequestError } from '../api/client.js';
 import { GoogleButton } from '../auth/google-button.js';
+import { isIosStandalone, openSignInWindow, useSignInWindow } from '../auth/standalone-sign-in.js';
 import { AccessRequest } from '../features/employee/access-request.js';
+import { InstallInvite } from '../features/employee/install-app.js';
 import { AppLoading } from '../components/brand/app-loading.js';
 import { LoginScreen } from '../features/employee/screens/login-screen.js';
 import { ProblemScreen } from '../features/employee/screens/problem-screen.js';
@@ -43,11 +45,13 @@ async function readSession(): Promise<State> {
   }
 }
 
+const SIGN_IN_FAILED = 'No pudimos verificar tu cuenta de Google. Intenta de nuevo.';
+
 /** Outcome of Google's redirect, as reported by the server. */
 function stateForAccessIssue(issue: string): State {
   return issue === 'no-autorizada'
     ? { kind: 'not-authorized' }
-    : { kind: 'signed-out', error: 'No pudimos verificar tu cuenta de Google. Intenta de nuevo.' };
+    : { kind: 'signed-out', error: SIGN_IN_FAILED };
 }
 
 export function RealApp() {
@@ -55,6 +59,8 @@ export function RealApp() {
   const [saving, setSaving] = useState(false);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
   const navigate = useNavigate();
+  // Installed on an iPhone home screen: Google's sign-in runs in a window of the app (D9).
+  const [standalone] = useState(isIosStandalone);
 
   // Back from Google (redirect mode, D5): the server says how it went in ?acceso=.
   // Read once, applied to the first session check, then removed from the address.
@@ -86,6 +92,21 @@ export function RealApp() {
     };
   }, [sessionCheck]);
 
+  useSignInWindow(
+    standalone && state.kind === 'signed-out',
+    (outcome: SignInOutcome) => {
+      if (outcome === 'ok') loadSession();
+      else if (outcome === 'no-autorizada') setState({ kind: 'not-authorized' });
+      else if (outcome === 'error') setState({ kind: 'signed-out', error: SIGN_IN_FAILED });
+    },
+    () => {
+      // Back in view without a report: enter only if the window did sign in.
+      void readSession().then((next) => {
+        if (next.kind === 'signed-in') setState(next);
+      });
+    },
+  );
+
   const onSessionExpired = useCallback(() => {
     setState({ kind: 'signed-out', error: 'Tu sesión terminó. Inicia sesión de nuevo.' });
   }, []);
@@ -112,8 +133,10 @@ export function RealApp() {
       return (
         <LoginScreen
           error={state.error}
+          installInvite={<InstallInvite />}
+          {...(standalone ? { onGoogle: openSignInWindow } : {})}
           googleButton={
-            clientId ? (
+            standalone ? undefined : clientId ? (
               <GoogleButton clientId={clientId} />
             ) : (
               <p role="alert" className="text-center text-[14px] text-danger">

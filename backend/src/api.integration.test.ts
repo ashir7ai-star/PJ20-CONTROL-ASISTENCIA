@@ -49,6 +49,7 @@ async function makeApp(authRateLimitMax = 1000) {
     api: {
       db,
       redis,
+      googleClientId: CLIENT_ID,
       verifier: createGoogleVerifier(
         CLIENT_ID,
         createLocalJWKSet({
@@ -332,6 +333,97 @@ describe('inicio de sesión por redirección (D5, iPhone)', () => {
       'https://sitio-malicioso.com',
     );
     expect(res.statusCode).toBe(403);
+  });
+});
+
+describe('inicio de sesión en la app instalada en iPhone (D9)', () => {
+  const GOOGLE = 'https://accounts.google.com';
+
+  /** The app's window starts here: nonce cookie + redirect to Google. */
+  async function start(host = 'localhost:5173') {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/auth/google/start',
+      headers: { host },
+    });
+    const cookie = res.cookies.find((c) => c.name === NONCE_COOKIE);
+    if (!cookie) throw new Error('sin cookie de nonce');
+    return { res, cookie, google: new URL(res.headers.location ?? '') };
+  }
+
+  function windowPost(fields: Record<string, string>, cookie?: string) {
+    return app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/google/redirect',
+      headers: {
+        origin: GOOGLE,
+        'content-type': 'application/x-www-form-urlencoded',
+        ...(cookie ? { cookie } : {}),
+      },
+      payload: new URLSearchParams(fields).toString(),
+    });
+  }
+
+  it('va a Google con el nonce atado a la cookie de la ventana y nuestra dirección registrada', async () => {
+    const { res, cookie, google } = await start();
+    expect(res.statusCode).toBe(302);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(google.origin).toBe(GOOGLE);
+    expect(google.searchParams.get('client_id')).toBe(CLIENT_ID);
+    expect(google.searchParams.get('redirect_uri')).toBe(`${ORIGIN}/api/v1/auth/google/redirect`);
+    expect(google.searchParams.get('nonce')).toBe(cookie.value);
+    expect(cookie).toMatchObject({ httpOnly: true, secure: true, sameSite: 'None', maxAge: 300 });
+  });
+
+  it('un Host ajeno nunca cambia la dirección de regreso', async () => {
+    const { google } = await start('malicioso.com');
+    expect(google.searchParams.get('redirect_uri')).toBe(`${ORIGIN}/api/v1/auth/google/redirect`);
+  });
+
+  it('Google devuelve el id_token: abre sesión y la ventana avisa a la app', async () => {
+    const user = await addUser('employee');
+    const { cookie } = await start();
+    const res = await windowPost(
+      { id_token: await googleToken(user.email, cookie.value), state: 'ventana' },
+      `${NONCE_COOKIE}=${cookie.value}`,
+    );
+    expect(res.statusCode).toBe(303);
+    expect(res.headers.location).toBe('/acceso-listo.html?resultado=ok');
+    const me = await call('GET', '/me', sessionCookie(res));
+    expect(me.json()).toMatchObject({ id: user.id });
+  });
+
+  it('nonce reutilizado o de otro navegador: error, sin sesión', async () => {
+    const user = await addUser('employee');
+    const { cookie } = await start();
+    const fields = { id_token: await googleToken(user.email, cookie.value), state: 'ventana' };
+    await windowPost(fields, `${NONCE_COOKIE}=${cookie.value}`);
+    const replay = await windowPost(fields, `${NONCE_COOKIE}=${cookie.value}`);
+    expect(replay.headers.location).toBe('/acceso-listo.html?resultado=error');
+    const other = await start();
+    const csrf = await windowPost(fields, `${NONCE_COOKIE}=${other.cookie.value}`);
+    expect(csrf.headers.location).toBe('/acceso-listo.html?resultado=error');
+    expect(csrf.cookies.find((c) => c.name === SESSION_COOKIE)).toBeUndefined();
+  });
+
+  it('cuenta no autorizada: la ventana lo informa y deja el comprobante para pedir acceso', async () => {
+    const { cookie } = await start();
+    const res = await windowPost(
+      { id_token: await googleToken(unique('extrano'), cookie.value), state: 'ventana' },
+      `${NONCE_COOKIE}=${cookie.value}`,
+    );
+    expect(res.headers.location).toBe('/acceso-listo.html?resultado=no-autorizada');
+    expect(res.cookies.find((c) => c.name === ACCESS_PROOF_COOKIE)).toBeDefined();
+    expect(res.cookies.find((c) => c.name === SESSION_COOKIE)).toBeUndefined();
+  });
+
+  it('si la persona cancela en Google, la ventana se cierra sin error', async () => {
+    const { cookie } = await start();
+    const res = await windowPost(
+      { error: 'access_denied', state: 'ventana' },
+      `${NONCE_COOKIE}=${cookie.value}`,
+    );
+    expect(res.headers.location).toBe('/acceso-listo.html?resultado=cancelado');
   });
 });
 

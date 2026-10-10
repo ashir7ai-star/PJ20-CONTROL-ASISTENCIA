@@ -183,6 +183,12 @@
   padding-bottom: max(env(safe-area-inset-bottom), 0px);
 }
 
+/* Bottom padding that never lets content sit under the iPhone home indicator
+   (the installed app draws edge to edge): pb-safe-4 = max(indicator, 16px). */
+@utility pb-safe-* {
+  padding-bottom: max(env(safe-area-inset-bottom), --spacing(--value(integer)));
+}
+
 @layer base {
   html {
     color-scheme: light;

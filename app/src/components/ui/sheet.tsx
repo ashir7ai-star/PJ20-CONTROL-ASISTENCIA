@@ -67,8 +67,10 @@ export function Sheet({
               <X className="size-5" aria-hidden="true" />
             </Dialog.Close>
           </header>
-          <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
-          {footer && <footer className="border-t border-line px-6 py-4">{footer}</footer>}
+          <div className={cn('flex-1 overflow-y-auto px-6 pt-5', footer ? 'pb-5' : 'pb-safe-5')}>
+            {children}
+          </div>
+          {footer && <footer className="border-t border-line px-6 pt-4 pb-safe-4">{footer}</footer>}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
