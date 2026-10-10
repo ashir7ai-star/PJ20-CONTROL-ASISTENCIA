@@ -37,7 +37,8 @@ export function Segmented<T extends string>({
               onChange(option.value);
             }}
             className={cn(
-              'h-11 px-4 text-[14px] font-medium transition-colors',
+              // flex-1: share the width evenly when the control is stretched (w-full).
+              'h-11 flex-1 px-4 text-[14px] font-medium transition-colors',
               selected
                 ? 'rounded-xl bg-surface-raised text-ink shadow-sm ring-1 ring-line-strong'
                 : 'text-ink-muted hover:text-ink',

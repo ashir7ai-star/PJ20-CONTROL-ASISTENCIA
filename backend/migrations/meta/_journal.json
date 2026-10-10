@@ -71,6 +71,20 @@
       "when": 1791647113190,
       "tag": "0009_copias_de_seguridad_permisos",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791664273990,
+      "tag": "0010_revision_y_correcciones",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791664280388,
+      "tag": "0011_revision_y_correcciones_seguridad",
+      "breakpoints": true
     }
   ]
 }

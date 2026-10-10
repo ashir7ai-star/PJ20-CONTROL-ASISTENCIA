@@ -25,6 +25,9 @@ export type ApiErrorCode = (typeof apiErrorCodes)[number];
 
 // ── Attendance (CLAUDE.md §2) ──────────────────────────────────────────────
 
+/** Every date and time is shown, and every business day counted, in Bogotá (§2.2). */
+export const TIME_ZONE = 'America/Bogota';
+
 /** GPS accuracy above this (metres) is accepted but flagged for review (§2.6). */
 export const WEAK_ACCURACY_M = 100;
 /** A GPS fix older than this when marking is flagged for review (§2B.5). */

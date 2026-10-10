@@ -1,33 +1,29 @@
 /**
- * "Marcaciones de hoy" — the first real admin page (Fase 3, decision D3).
- * Real records of one Bogotá day: who, entry/exit, server time, accuracy,
- * map link and the selfie (served by the API to admin sessions only,
- * decision 0004).
+ * "Marcaciones" — one Bogotá day of the timeline (Fase 3, D3; Fase 6): who,
+ * entry/exit, server time, accuracy, map link and the selfie (served by the
+ * API to admin sessions only, decision 0004), plus the administrator's
+ * corrections and verdicts, and the actions to make them.
  */
-import type { AdminAttendanceEntry, ReviewReason } from '@pj20/shared';
-import { CameraOff, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import type { AdminAttendanceEntry, AdminTimelineEntry } from '@pj20/shared';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
 import { api, ApiRequestError } from '../../api/client.js';
-import { Avatar } from '../../components/ui/avatar.js';
 import { Button } from '../../components/ui/button.js';
 import { Card } from '../../components/ui/card.js';
-import { Sheet } from '../../components/ui/sheet.js';
 import { Skeleton } from '../../components/ui/skeleton.js';
-import { StatusBadge } from '../../components/ui/status-badge.js';
-import { cn } from '../../lib/cn.js';
-import { formatAccuracy, formatLongDate, formatTime, TIME_ZONE } from '../../lib/format.js';
-import { AdminShell } from './admin-shell.js';
-import { KindLabel } from './components/admin-ui.js';
-import { initials } from './model.js';
+import { formatLongDate, TIME_ZONE } from '../../lib/format.js';
+import { AdminShell, type ShellTools } from './admin-shell.js';
+import {
+  AddCorrectionDialog,
+  ApproveButton,
+  RejectDialog,
+  VoidDialog,
+} from './timeline-dialogs.js';
+import { awaitsReview, entryInstant, SelfieSheet, TimelineEntryCard } from './timeline-entry.js';
 
 const REFRESH_MS = 60_000;
-
-const reasonLabels: Record<ReviewReason, string> = {
-  low_accuracy: 'GPS impreciso',
-  stale_location: 'Ubicación vieja',
-};
 
 /** Calendar date (YYYY-MM-DD) in Bogotá for an instant. */
 function bogotaDate(date: Date): string {
@@ -44,14 +40,30 @@ const noonOf = (date: string) => new Date(`${date}T12:00:00-05:00`);
 
 type Load =
   | { kind: 'loading' }
-  | { kind: 'ready'; entries: AdminAttendanceEntry[] }
+  | { kind: 'ready'; entries: AdminTimelineEntry[] }
   | { kind: 'failed'; message: string };
 
 export function TodayPage() {
-  return <AdminShell>{() => <TodayContent />}</AdminShell>;
+  return <AdminShell>{(_me, tools) => <TodayContent tools={tools} />}</AdminShell>;
 }
 
-function TodayContent() {
+/**
+ * The other half of the same shift in this day's list: the exit after an
+ * entry, or the entry before an exit, of the same person and still in force.
+ */
+function partnerOf(
+  entry: AdminTimelineEntry,
+  entries: AdminTimelineEntry[],
+): AdminTimelineEntry | null {
+  const mine = entries
+    .filter((e) => e.employee.id === entry.employee.id && e.voided === null)
+    .sort((a, b) => entryInstant(a).getTime() - entryInstant(b).getTime());
+  const index = mine.findIndex((e) => e.id === entry.id);
+  const candidate = entry.kind === 'check_in' ? mine[index + 1] : mine[index - 1];
+  return candidate && candidate.kind !== entry.kind ? candidate : null;
+}
+
+function TodayContent({ tools }: { tools: ShellTools }) {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const today = bogotaDate(new Date());
@@ -61,10 +73,19 @@ function TodayContent() {
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [refresh, setRefresh] = useState(0);
   const [selfie, setSelfie] = useState<AdminAttendanceEntry | null>(null);
+  const [rejecting, setRejecting] = useState<AdminAttendanceEntry | null>(null);
+  const [voiding, setVoiding] = useState<AdminTimelineEntry | null>(null);
+  const [adding, setAdding] = useState(false);
+  const entries = load.kind === 'ready' ? load.entries : [];
+  // Re-reads the day and the tab counters; each dialog closes only itself.
+  const changed = useCallback(() => {
+    setRefresh((n) => n + 1);
+    tools.refreshCounts();
+  }, [tools]);
 
   useEffect(() => {
     let cancelled = false;
-    api<AdminAttendanceEntry[]>(`/admin/attendance?date=${date}`).then(
+    api<AdminTimelineEntry[]>(`/admin/attendance?date=${date}`).then(
       (entries) => {
         if (!cancelled) setLoad({ kind: 'ready', entries });
       },
@@ -112,16 +133,29 @@ function TodayContent() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-4">
         <div>
           <h1 className="text-[26px] font-semibold tracking-tight">
             {isToday ? 'Marcaciones de hoy' : 'Marcaciones'}
           </h1>
-          <p className="mt-1 text-[15px] capitalize text-ink-muted">
-            {formatLongDate(noonOf(date))}
-          </p>
+          <p className="mt-1 text-[15px] text-ink-muted">{formatLongDate(noonOf(date))}</p>
         </div>
         <div className="flex gap-1">
+          <Button
+            variant="secondary"
+            aria-label="Agregar marcación olvidada"
+            icon={<Plus className="size-5" aria-hidden="true" />}
+            onClick={() => {
+              setAdding(true);
+            }}
+          >
+            <span className="hidden sm:inline" aria-hidden="true">
+              Agregar marcación olvidada
+            </span>
+            <span className="sm:hidden" aria-hidden="true">
+              Agregar
+            </span>
+          </Button>
           <Button
             variant="secondary"
             className="w-11 px-0"
@@ -152,24 +186,80 @@ function TodayContent() {
           setRefresh((n) => n + 1);
         }}
         onOpenSelfie={setSelfie}
+        actionsFor={(entry) => (
+          <>
+            {awaitsReview(entry) && (
+              <>
+                <ApproveButton entry={entry} onDone={changed} />
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setRejecting(entry);
+                  }}
+                >
+                  Rechazar
+                </Button>
+              </>
+            )}
+            <Button
+              variant="ghost"
+              className="text-danger"
+              onClick={() => {
+                setVoiding(entry);
+              }}
+            >
+              Anular
+            </Button>
+          </>
+        )}
       />
 
-      <Sheet
-        open={selfie !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelfie(null);
+      {rejecting && (
+        <RejectDialog
+          key={rejecting.id}
+          entry={rejecting}
+          onClose={() => {
+            setRejecting(null);
+          }}
+          onDone={() => {
+            setRejecting(null);
+            changed();
+          }}
+        />
+      )}
+      {voiding && (
+        <VoidDialog
+          key={voiding.id}
+          entry={voiding}
+          partner={partnerOf(voiding, entries)}
+          onClose={() => {
+            setVoiding(null);
+          }}
+          onDone={() => {
+            setVoiding(null);
+            changed();
+          }}
+        />
+      )}
+      {adding && (
+        <AddCorrectionDialog
+          defaultDate={date}
+          onClose={() => {
+            setAdding(false);
+          }}
+          onDone={() => {
+            setAdding(false);
+            changed();
+          }}
+        />
+      )}
+
+      <SelfieSheet
+        entry={selfie}
+        onClose={() => {
+          setSelfie(null);
         }}
-        variant="center"
-        title={selfie ? `${selfie.employee.name} · ${formatTime(new Date(selfie.serverTime))}` : ''}
-      >
-        {selfie && (
-          <img
-            src={`/api/v1/admin/attendance/${selfie.id}/selfie`}
-            alt={`Selfie de ${selfie.employee.name} al marcar`}
-            className="w-full rounded-2xl bg-surface object-contain"
-          />
-        )}
-      </Sheet>
+      />
     </>
   );
 }
@@ -179,11 +269,13 @@ function DayContent({
   isToday,
   onRetry,
   onOpenSelfie,
+  actionsFor,
 }: {
   load: Load;
   isToday: boolean;
   onRetry: () => void;
   onOpenSelfie: (entry: AdminAttendanceEntry) => void;
+  actionsFor: (entry: AdminTimelineEntry) => ReactNode;
 }) {
   if (load.kind === 'loading') {
     return (
@@ -218,19 +310,24 @@ function DayContent({
     );
   }
 
-  const checkIns = entries.filter((e) => e.kind === 'check_in').length;
-  const pending = entries.filter((e) => e.reviewStatus === 'pending').length;
+  const inForce = entries.filter((e) => e.voided === null);
+  const checkIns = inForce.filter((e) => e.kind === 'check_in').length;
+  const pending = entries.filter(awaitsReview).length;
   return (
     <>
       <dl className="mt-6 grid grid-cols-3 gap-3">
         <Stat label="Entradas" value={checkIns} />
-        <Stat label="Salidas" value={entries.length - checkIns} />
+        <Stat label="Salidas" value={inForce.length - checkIns} />
         <Stat label="Por revisar" value={pending} warn={pending > 0} />
       </dl>
       <ul className="mt-4 flex flex-col gap-3">
         {entries.map((entry) => (
           <li key={entry.id}>
-            <EntryCard entry={entry} onOpenSelfie={onOpenSelfie} />
+            <TimelineEntryCard
+              entry={entry}
+              onOpenSelfie={onOpenSelfie}
+              actions={actionsFor(entry)}
+            />
           </li>
         ))}
       </ul>
@@ -245,94 +342,6 @@ function Stat({ label, value, warn = false }: { label: string; value: number; wa
       <dd className={`mt-1 text-[24px] font-semibold tabular-nums ${warn ? 'text-warning' : ''}`}>
         {value}
       </dd>
-    </Card>
-  );
-}
-
-function EntryCard({
-  entry,
-  onOpenSelfie,
-}: {
-  entry: AdminAttendanceEntry;
-  onOpenSelfie: (entry: AdminAttendanceEntry) => void;
-}) {
-  const time = new Date(entry.serverTime);
-  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${String(entry.latitude)},${String(entry.longitude)}`;
-  return (
-    <Card className="flex gap-4 p-4">
-      {entry.selfie === 'stored' ? (
-        <button
-          type="button"
-          onClick={() => {
-            onOpenSelfie(entry);
-          }}
-          className="size-20 shrink-0 overflow-hidden rounded-2xl bg-surface"
-          aria-label={`Ver selfie de ${entry.employee.name}`}
-        >
-          <img
-            src={`/api/v1/admin/attendance/${entry.id}/selfie`}
-            alt=""
-            loading="lazy"
-            className="size-full object-cover"
-          />
-        </button>
-      ) : (
-        // No photo: not authorized by the employee (D7) or deleted by retention.
-        <span
-          className={cn(
-            'grid size-20 shrink-0 place-items-center rounded-2xl px-1 text-center text-[11px] font-semibold leading-tight',
-            entry.selfie === 'not-authorized'
-              ? 'bg-warning-soft text-warning'
-              : 'bg-surface text-ink-muted',
-          )}
-        >
-          <span>
-            <CameraOff className="mx-auto mb-1 size-5" aria-hidden="true" />
-            {entry.selfie === 'not-authorized' ? 'Sin selfie' : 'Foto eliminada'}
-          </span>
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <Avatar initials={initials(entry.employee.name)} size="sm" />
-            <p className="truncate text-[15px] font-semibold">{entry.employee.name}</p>
-          </div>
-          <time
-            dateTime={entry.serverTime}
-            className="shrink-0 text-[15px] font-semibold tabular-nums"
-          >
-            {formatTime(time)}
-          </time>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[14px]">
-          <KindLabel kind={entry.kind} />
-          <a
-            href={mapUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-info hover:underline"
-          >
-            <MapPin className="size-4" aria-hidden="true" />
-            Mapa · {formatAccuracy(entry.accuracyM)}
-          </a>
-        </div>
-        {entry.selfie === 'not-authorized' && (
-          <p className="mt-2 text-[13px] text-ink-muted">
-            No autorizó la selfie (es opcional por ley): verifícala por otro medio si hace falta.
-          </p>
-        )}
-        {entry.selfie === 'expired' && (
-          <p className="mt-2 text-[13px] text-ink-muted">
-            La selfie se borró por la política de conservación (90 días).
-          </p>
-        )}
-        {entry.reviewStatus === 'pending' && (
-          <StatusBadge tone="warning" className="mt-2">
-            Por revisar: {entry.reviewReasons.map((r) => reasonLabels[r]).join(' · ')}
-          </StatusBadge>
-        )}
-      </div>
     </Card>
   );
 }

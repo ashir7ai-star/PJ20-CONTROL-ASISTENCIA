@@ -1,27 +1,27 @@
 /**
  * Attendance use cases: current status, marking (server time + GPS + selfie)
- * and the admin's daily list. Rules live in rules.ts; this file orchestrates
- * the database, the photo store and the transaction.
+ * and the selfie for the admin. Rules live in rules.ts; this file orchestrates
+ * the database, the photo store and the transaction. The admin's timeline,
+ * reviews and corrections live in admin-timeline.ts.
  */
 import { randomUUID } from 'node:crypto';
 
 import {
-  type AdminAttendanceEntry,
   type AttendanceStatus,
   CONSENT_VERSION,
   type MarkRequest,
   type MarkResponse,
   type ReviewReason,
 } from '@pj20/shared';
-import { and, asc, desc, eq, gte, lt } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
-import type { Database, Executor } from '../db/client.js';
+import type { Database } from '../db/client.js';
 import { attendanceRecords, consents, employees } from '../db/schema.js';
 import { DomainError, errors } from '../errors.js';
 import type { PhotoStore } from '../infra/photo-store.js';
 import { selfieAuthorized } from '../auth/selfie.js';
+import { lastEffectiveEvent } from './timeline-store.js';
 import {
-  businessDayRange,
   isValidSelfie,
   reviewReasons,
   selfieKey,
@@ -35,23 +35,17 @@ export interface MarkMeta {
   userAgent?: string | undefined;
 }
 
-async function lastRecord(db: Executor, employeeId: string) {
-  const [row] = await db
-    .select({ kind: attendanceRecords.kind, serverTime: attendanceRecords.serverTime })
-    .from(attendanceRecords)
-    .where(eq(attendanceRecords.employeeId, employeeId))
-    .orderBy(desc(attendanceRecords.serverTime))
-    .limit(1);
-  return row ?? null;
-}
-
+/**
+ * Status from the effective timeline (Fase 6): if an administrator added the
+ * exit the employee forgot, the employee is off duty and can check in again.
+ */
 export async function attendanceStatus(
   db: Database,
   employeeId: string,
 ): Promise<AttendanceStatus> {
-  const last = await lastRecord(db, employeeId);
+  const last = await lastEffectiveEvent(db, employeeId);
   if (!last) return { onDutySince: null, lastRecord: null };
-  const at = last.serverTime.toISOString();
+  const at = last.at.toISOString();
   return {
     onDutySince: last.kind === 'check_in' ? at : null,
     lastRecord: { kind: last.kind, at },
@@ -111,7 +105,7 @@ export async function markAttendance(
     const selfieProblem = selfieRuleError(await selfieAuthorized(tx, employeeId), jpeg !== null);
     if (selfieProblem) throw errors.ruleViolation(selfieProblem);
 
-    const last = await lastRecord(tx, employeeId);
+    const last = await lastEffectiveEvent(tx, employeeId);
     const problem = transitionError(last?.kind ?? null, input.kind);
     if (problem) throw errors.ruleViolation(problem);
 
@@ -152,34 +146,6 @@ export async function markAttendance(
       throw error;
     }
   });
-}
-
-/** Every record of one Bogotá calendar day, newest first, with the employee. */
-export async function listDay(db: Database, date: string): Promise<AdminAttendanceEntry[]> {
-  const { start, end } = businessDayRange(date);
-  const now = new Date();
-  const rows = await db
-    .select({ record: attendanceRecords, employee: employees })
-    .from(attendanceRecords)
-    .innerJoin(employees, eq(employees.id, attendanceRecords.employeeId))
-    .where(and(gte(attendanceRecords.serverTime, start), lt(attendanceRecords.serverTime, end)))
-    .orderBy(desc(attendanceRecords.serverTime), asc(employees.name));
-
-  return rows.map(({ record: r, employee: e }) => ({
-    id: r.id,
-    employee: { id: e.id, name: e.name, email: e.email },
-    kind: r.kind,
-    serverTime: r.serverTime.toISOString(),
-    deviceTime: r.deviceTime?.toISOString() ?? null,
-    latitude: r.latitude,
-    longitude: r.longitude,
-    accuracyM: r.accuracyM,
-    reviewStatus: r.reviewStatus,
-    reviewReasons: r.reviewReasons as ReviewReason[],
-    ip: r.ip,
-    userAgent: r.userAgent,
-    selfie: selfieState(r, now),
-  }));
 }
 
 /** Selfie bytes of one record (admin only; checked by the route). */
