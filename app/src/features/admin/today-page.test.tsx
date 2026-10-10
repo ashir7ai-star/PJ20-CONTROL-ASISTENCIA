@@ -1,4 +1,4 @@
-import type { AdminAttendanceEntry, Me } from '@pj20/shared';
+import type { AdminAttendanceEntry, BackupStatus, Me } from '@pj20/shared';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -34,11 +34,13 @@ const entry = (over: Partial<AdminAttendanceEntry>): AdminAttendanceEntry => ({
 
 let me: Me;
 let entries: AdminAttendanceEntry[];
+let backups: BackupStatus | null;
 let requested: string[];
 
 beforeEach(() => {
   me = admin;
   requested = [];
+  backups = null;
   entries = [
     entry({}),
     entry({
@@ -58,7 +60,13 @@ beforeEach(() => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     requested.push(url);
     const body =
-      url === '/api/v1/me' ? me : url.startsWith('/api/v1/admin/attendance') ? entries : null;
+      url === '/api/v1/me'
+        ? me
+        : url.startsWith('/api/v1/admin/attendance')
+          ? entries
+          : url === '/api/v1/admin/backups'
+            ? backups
+            : null;
     if (body === null) return Promise.reject(new Error(`Ruta no simulada: ${url}`));
     return Promise.resolve(
       new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } }),
@@ -154,5 +162,31 @@ describe('Marcaciones de hoy (administrador, datos reales)', () => {
     expect(screen.getByText('Foto eliminada')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Ver selfie/ })).toBeNull();
     expect(screen.getByText(/es opcional por ley/)).toBeInTheDocument();
+  });
+
+  it('copias de seguridad al día: muestra la última copia buena (D8)', async () => {
+    backups = {
+      database: { lastSuccessAt: '2026-10-10T07:00:00.000Z', lastFailure: null },
+      selfies: { lastSuccessAt: '2026-10-10T08:00:00.000Z', lastFailure: null },
+      stale: false,
+    };
+    renderPage();
+    expect(await screen.findByText(/Última copia de seguridad: .* ✓/)).toBeInTheDocument();
+    expect(screen.queryByText(/no están al día/)).toBeNull();
+  });
+
+  it('copias atrasadas: alerta visible con el último error y qué hacer', async () => {
+    backups = {
+      database: {
+        lastSuccessAt: '2026-10-07T07:00:00.000Z',
+        lastFailure: { at: '2026-10-09T07:00:00.000Z', detail: 'sin conexión con Drive' },
+      },
+      selfies: { lastSuccessAt: null, lastFailure: null },
+      stale: true,
+    };
+    renderPage();
+    const alert = await screen.findByText(/no están al día/);
+    expect(alert.closest('[role="alert"]')).toHaveTextContent('sin conexión con Drive');
+    expect(alert.closest('[role="alert"]')).toHaveTextContent('pj20-asistencia-respaldos');
   });
 });

@@ -139,6 +139,16 @@ export function PrivacyPolicyPage() {
             <li>
               Cada acción administrativa queda registrada en un historial que no se puede alterar.
             </li>
+            <li>
+              Hacemos <strong>copias de seguridad diarias cifradas</strong> fuera del servidor para
+              no perder los registros. Solo se usan para recuperar la información ante una falla.
+            </li>
+            <li>
+              Usamos proveedores de nube (el servidor de la aplicación y el almacenamiento de las
+              copias) que actúan como <strong>encargados del tratamiento</strong>: guardan la
+              información por cuenta de BLAZAR ENERGY y no pueden usarla para otros fines. Sus
+              servidores pueden estar fuera de Colombia.
+            </li>
           </ul>
         </Section>
 
@@ -159,6 +169,10 @@ export function PrivacyPolicyPage() {
             </li>
             <li>
               <strong>Solicitudes de acceso</strong> ya atendidas: 30 días.
+            </li>
+            <li>
+              <strong>Copias de seguridad:</strong> las diarias, 35 días; las mensuales, 12 meses.
+              Las selfies de las copias se borran al mismo tiempo que las originales.
             </li>
             <li>
               <strong>Autorizaciones y consentimientos:</strong> mientras se conserven los datos que

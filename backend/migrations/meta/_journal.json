@@ -57,6 +57,20 @@
       "when": 1791509805761,
       "tag": "0007_autorizacion_selfie_seguridad",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791647101965,
+      "tag": "0008_copias_de_seguridad",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791647113190,
+      "tag": "0009_copias_de_seguridad_permisos",
+      "breakpoints": true
     }
   ]
 }
