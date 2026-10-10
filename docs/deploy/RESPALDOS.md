@@ -46,7 +46,7 @@ node dist/db-usuario-respaldos.js
   BACKUP_DATABASE_URL=<del archivo .env.respaldos>
   RESPALDOS_CLAVE=<del archivo .env.respaldos>
   RESPALDOS_SAL=<del archivo .env.respaldos>
-  RCLONE_DRIVE_TOKEN=<el bloque {…} del paso 1.1, en una sola línea>
+  PERMISO_DRIVE=<el texto del paso 1.1, en una sola línea>
   S3_ENDPOINT=http://ashir_pj20-asistencia-storage:9000
   S3_BUCKET=pj20-selfies
   S3_ACCESS_KEY=<USUARIO_DE_RUSTFS>
@@ -105,7 +105,7 @@ restaurar fotos
 ## 4. Si aparece la alerta roja en el panel
 
 - Revisa los **logs** del servicio `pj20-asistencia-respaldos`; el último error también sale en la alerta.
-- **«token expired / invalid_grant»:** el permiso de Drive venció o se revocó. Repite el paso 1.1 y reemplaza `RCLONE_DRIVE_TOKEN`.
+- **«token expired / invalid_grant»:** el permiso de Drive venció o se revocó. Repite el paso 1.1 y reemplaza `PERMISO_DRIVE`.
 - **Espacio de Drive lleno:** libera espacio o amplía el plan.
 - Para forzar una copia: consola del servicio → `respaldar todo`.
 

@@ -32,7 +32,7 @@ token_de_drive() {
       *) valor=$(desenvolver_base64 "$valor") || break ;;
     esac
   done
-  echo "RCLONE_DRIVE_TOKEN no es un permiso válido de rclone authorize" >&2
+  echo "El permiso de Google Drive no es válido (repite rclone authorize)" >&2
   return 1
 }
 
@@ -41,11 +41,19 @@ token_de_drive() {
 destino="${RESPALDOS_DESTINO:-drive:PJ20-respaldos}"
 case "$destino" in
   drive:*)
-    : "${RCLONE_DRIVE_TOKEN:?Falta RCLONE_DRIVE_TOKEN (permiso de Google Drive)}"
+    # PERMISO_DRIVE (preferred) or RCLONE_DRIVE_TOKEN (first setups). The latter
+    # must not stay in the environment: rclone reads any RCLONE_DRIVE_* variable
+    # as a drive option itself, and would use the still-encoded value as token.
+    permiso="${PERMISO_DRIVE:-${RCLONE_DRIVE_TOKEN:-}}"
+    unset RCLONE_DRIVE_TOKEN
+    [ -n "$permiso" ] || {
+      echo "Falta PERMISO_DRIVE (permiso de Google Drive de rclone authorize)" >&2
+      exit 1
+    }
     export RCLONE_CONFIG_DRIVE_TYPE=drive
     # Least privilege: only the files this service creates, never the rest of the Drive.
     export RCLONE_CONFIG_DRIVE_SCOPE=drive.file
-    RCLONE_CONFIG_DRIVE_TOKEN=$(token_de_drive "$RCLONE_DRIVE_TOKEN") || exit 1
+    RCLONE_CONFIG_DRIVE_TOKEN=$(token_de_drive "$permiso") || exit 1
     export RCLONE_CONFIG_DRIVE_TOKEN
     # Deleted backups go away for real (retention), not to the Drive trash.
     export RCLONE_DRIVE_USE_TRASH=false
