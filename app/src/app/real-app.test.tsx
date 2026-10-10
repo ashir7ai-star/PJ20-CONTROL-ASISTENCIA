@@ -1,5 +1,5 @@
 import type { Me } from '@pj20/shared';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -203,6 +203,76 @@ describe('app real: sesión → consentimiento → Marcar', () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('radio', { name: 'No autorizo la selfie' }));
     fireEvent.click(screen.getByRole('button', { name: 'Guardar mi decisión' }));
+    expect(await screen.findByText(/Hola, Laura/)).toBeInTheDocument();
+  });
+});
+
+describe('app instalada en iPhone: inicio de sesión en una ventana de la app (D9)', () => {
+  let opened: string[];
+
+  beforeEach(() => {
+    opened = [];
+    Object.defineProperty(navigator, 'standalone', { value: true, configurable: true });
+    vi.spyOn(window, 'open').mockImplementation((url) => {
+      opened.push(String(url));
+      return {} as Window;
+    });
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'standalone');
+  });
+
+  /** Sign-in screen shown and its effects (the window listener) attached. */
+  async function signInScreen() {
+    renderApp();
+    await screen.findByRole('button', { name: 'Continuar con Google' });
+    await act(() => Promise.resolve());
+  }
+
+  /** What public/acceso-listo.js does in the sign-in window. */
+  function windowReports(outcome: string) {
+    const channel = new BroadcastChannel('pj20-acceso');
+    channel.postMessage(outcome);
+    channel.close();
+  }
+
+  it('el botón abre la ventana de inicio de sesión en el mismo toque, sin el botón de Google en la página', async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: 'Continuar con Google' }));
+    expect(opened).toEqual(['/api/v1/auth/google/start']);
+    expect(googleConfig).toBeUndefined();
+    expect(calls).not.toContain('POST /api/v1/auth/nonce');
+  });
+
+  it('cuando la ventana avisa que entró, la app lee la sesión y muestra Marcar', async () => {
+    await signInScreen();
+    routes['GET /api/v1/me'] = () => ({ status: 200, json: laura });
+    windowReports('ok');
+    expect(await screen.findByText(/Hola, Laura/)).toBeInTheDocument();
+  });
+
+  it('una cuenta no autorizada pasa a la solicitud de acceso', async () => {
+    await signInScreen();
+    windowReports('no-autorizada');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Tu cuenta no está autorizada');
+  });
+
+  it('un fallo se explica; un mensaje ajeno se ignora', async () => {
+    await signInScreen();
+    windowReports('<script>');
+    windowReports('error');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No pudimos verificar tu cuenta de Google',
+    );
+  });
+
+  it('si el aviso no llega, al volver a la app entra solo si hay sesión', async () => {
+    await signInScreen();
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(screen.getByRole('button', { name: 'Continuar con Google' })).toBeInTheDocument();
+    routes['GET /api/v1/me'] = () => ({ status: 200, json: laura });
+    document.dispatchEvent(new Event('visibilitychange'));
     expect(await screen.findByText(/Hola, Laura/)).toBeInTheDocument();
   });
 });

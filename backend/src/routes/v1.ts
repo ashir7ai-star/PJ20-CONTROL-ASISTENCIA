@@ -20,6 +20,8 @@ import {
   meSchema,
   nonceResponseSchema,
   selfieAuthorizationRequestSchema,
+  SIGN_IN_WINDOW_DONE_PATH,
+  type SignInOutcome,
   updateEmployeeSchema,
 } from '@pj20/shared';
 import { desc } from 'drizzle-orm';
@@ -39,6 +41,11 @@ import {
   setNonceCookie,
   setSessionCookie,
 } from '../auth/plugin.js';
+import {
+  appOriginFor,
+  googleAuthorizeUrl,
+  SIGN_IN_WINDOW_STATE,
+} from '../auth/google-authorize.js';
 import {
   acceptConsent,
   type AuthDeps,
@@ -73,14 +80,26 @@ const idParams = z.object({ id: z.uuid() });
 /** Google posts back here in redirect mode (D5); must be listed in Google Cloud. */
 const GOOGLE_ORIGINS = ['https://accounts.google.com', 'null'] as const;
 
+/** Registered in Google Cloud → Authorized redirect URIs (D5). */
+const GOOGLE_REDIRECT_PATH = '/api/v1/auth/google/redirect';
+
 /** Where the browser lands after Google's redirect; the app reads `acceso`. */
-const AFTER_LOGIN = {
+const AFTER_LOGIN: Record<SignInOutcome, string> = {
   ok: '/',
-  notAuthorized: '/?acceso=no-autorizada',
-  failed: '/?acceso=error',
-} as const;
+  'no-autorizada': '/?acceso=no-autorizada',
+  error: '/?acceso=error',
+  cancelado: '/',
+};
+
+/** The installed iPhone app's sign-in window (D9) reports to the app and closes instead. */
+function afterLogin(outcome: SignInOutcome, inWindow: boolean): string {
+  return inWindow ? `${SIGN_IN_WINDOW_DONE_PATH}?resultado=${outcome}` : AFTER_LOGIN[outcome];
+}
 
 export interface V1Options extends AuthDeps {
+  /** Our own addresses (CORS), to build Google's redirect URI. */
+  appOrigins: string[];
+  googleClientId: string;
   photos: PhotoStore;
   accessProofs: AccessProofStore;
   /**
@@ -124,6 +143,30 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
   );
 
   /**
+   * Starts Google's sign-in in the window opened by the app installed on an
+   * iPhone home screen (D9). Binds a fresh nonce to that window's cookie jar,
+   * which is the app's own, then goes to Google. A plain navigation: no data.
+   */
+  app.get(
+    '/auth/google/start',
+    { config: AUTH_RATE_LIMIT, schema: { tags: ['auth'], hide: true } },
+    async (request, reply) => {
+      const nonce = await deps.nonces.issue();
+      setNonceCookie(reply, nonce);
+      const origin = appOriginFor(request.host, request.protocol, deps.appOrigins);
+      void reply.header('cache-control', 'no-store');
+      return reply.redirect(
+        googleAuthorizeUrl({
+          clientId: deps.googleClientId,
+          redirectUri: `${origin}${GOOGLE_REDIRECT_PATH}`,
+          nonce,
+        }),
+        302,
+      );
+    },
+  );
+
+  /**
    * Sign-in in redirect mode (D5): works on iPhone, where Google's popup
    * cannot report back. Same verification as /auth/google, plus the nonce must
    * be the one bound to THIS browser by its cookie. Always answers with a
@@ -136,18 +179,29 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
       schema: {
         tags: ['auth'],
         hide: true,
-        body: z.looseObject({ credential: z.string().max(4096).optional() }),
+        // `credential`: Google's button (D5). `id_token` + `state` (+ `error` if the
+        // person cancels): the standard OpenID Connect form post of the window (D9).
+        body: z.looseObject({
+          credential: z.string().max(4096).optional(),
+          id_token: z.string().max(4096).optional(),
+          state: z.string().max(64).optional(),
+          error: z.string().max(256).optional(),
+        }),
       },
     },
     async (request, reply) => {
       const nonce = request.cookies[NONCE_COOKIE];
       clearNonceCookie(reply);
-      const { credential } = request.body;
-      if (!nonce || !credential) return reply.redirect(AFTER_LOGIN.failed, 303);
+      const { state, error: googleError } = request.body;
+      const credential = request.body.credential ?? request.body.id_token;
+      const inWindow = state === SIGN_IN_WINDOW_STATE;
+      const finish = (outcome: SignInOutcome) => reply.redirect(afterLogin(outcome, inWindow), 303);
+      if (googleError === 'access_denied') return finish('cancelado');
+      if (!nonce || !credential) return finish('error');
       try {
         const { token, expiresAt } = await signInWithGoogle(deps, credential, nonce, meta(request));
         setSessionCookie(reply, token, expiresAt);
-        return await reply.redirect(AFTER_LOGIN.ok, 303);
+        return await finish('ok');
       } catch (error) {
         // Not on the allowlist: let THIS browser request access (D6).
         if (error instanceof AccountNotAuthorizedError && error.identity) {
@@ -155,12 +209,7 @@ export const v1Routes: FastifyPluginCallbackZod<V1Options> = (app, deps, done) =
           setAccessProofCookie(reply, proof, ACCESS_PROOF_TTL_SECONDS);
         }
         if (error instanceof DomainError) {
-          return reply.redirect(
-            error.code === 'ACCOUNT_NOT_AUTHORIZED'
-              ? AFTER_LOGIN.notAuthorized
-              : AFTER_LOGIN.failed,
-            303,
-          );
+          return finish(error.code === 'ACCOUNT_NOT_AUTHORIZED' ? 'no-autorizada' : 'error');
         }
         throw error;
       }

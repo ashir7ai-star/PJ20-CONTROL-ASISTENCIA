@@ -107,7 +107,7 @@ export function ConsentScreen({ onAccept, mode = 'full', busy = false }: Consent
         </a>
       </p>
 
-      <div className="sticky bottom-0 -mx-6 mt-auto border-t border-line bg-canvas px-6 pb-2 pt-5">
+      <div className="sticky bottom-0 -mx-6 mt-auto border-t border-line bg-canvas px-6 pb-safe-2 pt-5">
         {mode === 'full' && (
           <div className="flex items-start gap-3">
             <Checkbox.Root

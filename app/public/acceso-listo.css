@@ -1,0 +1,57 @@
+/* Same tokens as src/index.css (canvas, ink, primary); this page loads no app bundle. */
+:root {
+  --canvas: #ffffff;
+  --ink: #0a1f3c;
+  --primary: #0a1f3c;
+  --primary-ink: #ffffff;
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  --canvas: #050b16;
+  --ink: #f5f8fc;
+  --primary: #ffffff;
+  --primary-ink: #0a1f3c;
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+main {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+  box-sizing: border-box;
+  text-align: center;
+}
+p {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 500;
+}
+a {
+  display: inline-flex;
+  min-height: 56px;
+  align-items: center;
+  padding: 0 24px;
+  border-radius: 16px;
+  background: var(--primary);
+  color: var(--primary-ink);
+  font-size: 17px;
+  font-weight: 600;
+  text-decoration: none;
+}
+a[hidden] {
+  display: none;
+}

@@ -31,6 +31,7 @@ export interface AppOptions {
   trustProxy?: number | false;
   /** Mounts the authenticated API v1 when provided. */
   api?: AuthDeps & {
+    googleClientId: string;
     redis: Redis;
     photos: PhotoStore;
     accessProofs: AccessProofStore;
@@ -136,7 +137,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     await app.register(
       async (scope) => {
         await scope.register(authPlugin, { db: api.db, allowedOrigins: options.appOrigins });
-        await scope.register(v1Routes, api);
+        await scope.register(v1Routes, { ...api, appOrigins: options.appOrigins });
       },
       { prefix: '/api/v1' },
     );

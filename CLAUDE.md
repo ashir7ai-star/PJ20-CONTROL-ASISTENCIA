@@ -43,7 +43,7 @@ Esta aplicación se construye al nivel de las mejores empresas de tecnología de
 1. La app pertenece a **BLAZAR ENERGY**. Encabezado de la app: **logo arriba y, justo debajo, "Control de Asistencia"**.
 2. Colores oficiales (extraídos del logo): azul marino `#0A1F3C`, verde `#10B981`, azul cielo `#0EA5E9`.
 3. Accesibilidad de la marca: texto blanco sobre `#10B981` o `#0EA5E9` **no cumple** AA. Usar texto azul marino sobre verde, o verde profundo `#047857` con texto blanco.
-4. Logos: `app/src/assets/brand/logo-light.png` (fondos claros) y `logo-dark.png` (fondos oscuros, letras blancas). Original en `docs/design/brand/`. Pendiente: versión vectorial (SVG) para íconos de la app.
+4. Logos: `app/src/assets/brand/logo-light.png` (fondos claros) y `logo-dark.png` (fondos oscuros, letras blancas). Original en `docs/design/brand/`. Símbolo vectorial redibujado (`docs/design/brand/blazar-simbolo.svg`, D9) para los íconos de la app; pendiente el SVG oficial del logo completo.
 5. Dirección visual aprobada: **"Pulso"** (reloj protagonista + botón circular que retoma el anillo del logo). Ver `docs/design/`.
 
 ---

@@ -43,6 +43,7 @@ async function main(): Promise<void> {
     api: {
       db: appDb,
       redis,
+      googleClientId: env.GOOGLE_CLIENT_ID,
       verifier: createGoogleVerifier(env.GOOGLE_CLIENT_ID),
       nonces: createNonceStore(redis),
       photos,

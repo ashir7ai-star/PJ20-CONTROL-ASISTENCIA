@@ -42,3 +42,16 @@ export const RECORD_RETENTION_YEARS_AFTER_EMPLOYMENT = 3;
 
 /** Business time zone (no daylight saving: always UTC−5). */
 export const BUSINESS_TIME_ZONE = 'America/Bogota';
+
+// ── Sign-in from the installed iPhone app (D9) ────────────────────────────
+
+/**
+ * On iPhone, the app installed on the home screen keeps its cookies apart from
+ * Safari, so Google's sign-in runs in a window of the app itself. That window
+ * lands on this page, which tells the app the outcome and closes.
+ */
+export const SIGN_IN_WINDOW_DONE_PATH = '/acceso-listo.html';
+/** BroadcastChannel the sign-in window reports on (outcome only, never credentials). */
+export const SIGN_IN_CHANNEL = 'pj20-acceso';
+export const signInOutcomes = ['ok', 'no-autorizada', 'error', 'cancelado'] as const;
+export type SignInOutcome = (typeof signInOutcomes)[number];

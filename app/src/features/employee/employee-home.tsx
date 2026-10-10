@@ -3,10 +3,12 @@
  * marking flow on top of it. The status always comes from the server.
  */
 import type { AttendanceStatus, Me } from '@pj20/shared';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 
 import { api, ApiRequestError } from '../../api/client.js';
 import { AppLoading } from '../../components/brand/app-loading.js';
+import { useInstall } from '../../lib/install.js';
+import { InstallGuide, InstallInvite } from './install-app.js';
 import { MarkFlow } from './mark-flow.js';
 import { SelfieSettings } from './selfie-settings.js';
 import { type EmployeeView, nextAction } from './model.js';
@@ -52,6 +54,8 @@ export function EmployeeHome({
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [marking, setMarking] = useState(false);
   const [selfieSettings, setSelfieSettings] = useState(false);
+  const [installGuide, setInstallGuide] = useState(false);
+  const install = useInstall();
   const withSelfie = me.selfieAuthorized === true;
   // Incrementing re-reads the status (on start, after marking, on retry).
   const [refresh, setRefresh] = useState(0);
@@ -120,7 +124,25 @@ export function EmployeeHome({
           setSelfieSettings(true);
         }}
         {...(onOpenAdmin ? { onOpenAdmin } : {})}
+        installInvite={<InstallInvite />}
+        {...(install.available
+          ? {
+              onInstall: () => {
+                setInstallGuide(true);
+              },
+            }
+          : {})}
       />
+      {installGuide && (
+        <Suspense fallback={null}>
+          <InstallGuide
+            open
+            onClose={() => {
+              setInstallGuide(false);
+            }}
+          />
+        </Suspense>
+      )}
       <SelfieSettings
         authorized={withSelfie}
         open={selfieSettings}

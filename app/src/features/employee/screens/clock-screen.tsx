@@ -1,4 +1,5 @@
 import { Camera, Clock, LayoutDashboard, LocateFixed, MapPin } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Button } from '../../../components/ui/button.js';
 import { ThemeMenu } from '../../../components/ui/theme-menu.js';
@@ -27,6 +28,10 @@ interface ClockScreenProps {
   onSelfieSettings?: () => void;
   /** false: the employee did not authorize the selfie and marks without it (D7). */
   withSelfie?: boolean;
+  /** Real app: "Instalar la app" in the account menu (D9). */
+  onInstall?: () => void;
+  /** Real app: invitation to install it on the home screen (D9). */
+  installInvite?: ReactNode;
 }
 
 /** Main employee screen ("Marcar"): live clock, shift status and the Pulso button. */
@@ -38,6 +43,8 @@ export function ClockScreen({
   onLogout,
   onSelfieSettings,
   withSelfie = true,
+  onInstall,
+  installInvite,
 }: ClockScreenProps) {
   const now = useNow('minute', fixedNow);
   const clock = formatClock(now);
@@ -50,6 +57,7 @@ export function ClockScreen({
         <ThemeMenu
           {...(onLogout ? { onLogout } : {})}
           {...(onSelfieSettings ? { onSelfieSettings } : {})}
+          {...(onInstall ? { onInstall } : {})}
         />
       }
     >
@@ -82,6 +90,7 @@ export function ClockScreen({
       )}
 
       <footer className="mt-auto pt-10">
+        {installInvite && <div className="mb-6">{installInvite}</div>}
         {view.lastRecord && (
           <p className="mb-4 flex items-center justify-center gap-1.5 text-[13px] text-ink-muted">
             <Clock className="size-4" aria-hidden="true" />

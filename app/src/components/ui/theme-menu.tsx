@@ -1,4 +1,4 @@
-import { Camera, Check, LogOut, Moon, SunMedium, SunMoon } from 'lucide-react';
+import { Camera, Check, LogOut, Moon, Smartphone, SunMedium, SunMoon } from 'lucide-react';
 import { DropdownMenu } from 'radix-ui';
 
 import { cn } from '../../lib/cn.js';
@@ -17,12 +17,15 @@ export function ThemeMenu({
   className,
   onLogout,
   onSelfieSettings,
+  onInstall,
 }: {
   className?: string;
   /** When present, the menu also offers "Cerrar sesión". */
   onLogout?: () => void;
   /** When present: "Autorización de selfie" (change of mind at any time, D7). */
   onSelfieSettings?: () => void;
+  /** When present: "Instalar la app" (D9). */
+  onInstall?: () => void;
 }) {
   const preference = useThemePreference();
   const Icon = icons[preference];
@@ -80,6 +83,18 @@ export function ThemeMenu({
               >
                 <Camera className="size-4" aria-hidden="true" />
                 Autorización de selfie
+              </DropdownMenu.Item>
+            </>
+          )}
+          {onInstall && (
+            <>
+              <DropdownMenu.Separator className="my-1.5 h-px bg-line" />
+              <DropdownMenu.Item
+                onSelect={onInstall}
+                className="flex h-11 cursor-pointer select-none items-center gap-3 rounded-xl px-3 text-[15px] font-medium outline-none data-highlighted:bg-surface"
+              >
+                <Smartphone className="size-4" aria-hidden="true" />
+                Instalar la app
               </DropdownMenu.Item>
             </>
           )}

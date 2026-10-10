@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110">
+  <defs>
+    <linearGradient id="aguja" gradientUnits="userSpaceOnUse" x1="103" y1="6" x2="50.5" y2="58.5">
+      <stop offset="0" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#10B981"/>
+    </linearGradient>
+    <mask id="canal">
+      <rect width="110" height="110" fill="#fff"/>
+      <path d="M118.47 13.2 L95 -10 L-17.47 103.8 L6 127Z" fill="#000"/>
+    </mask>
+  </defs>
+  <circle cx="50.5" cy="58.5" r="42" fill="none" stroke="#0EA5E9" stroke-width="9" mask="url(#canal)"/>
+  <path d="M58.32 66.23 L103 6 L42.68 50.77Z" fill="url(#aguja)"/>
+  <path d="M58.32 66.23 L19 91 L42.68 50.77Z" fill="#0A1F3C"/>
+  <circle cx="50.5" cy="58.5" r="23.5" fill="#10B981"/>
+</svg>
